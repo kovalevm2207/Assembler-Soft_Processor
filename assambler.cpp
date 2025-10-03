@@ -1,13 +1,13 @@
 #include <stdio.h>
-#include <cstring>
-#include <math.h>
-#include <assert.h>
+#include <stdlib.h>    // для calloc, malloc, free
+#include <string.h>    // для работы со строками
+#include <fcntl.h>     // для O_RDONLY и других флагов
+#include <unistd.h>    // для open, read, close
 #include <sys/stat.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include <assert.h>
 
-#include "my_stack.h"
 #include "commands.h"
+#include "color_print.h"
 
 struct retranslator_s {
     int count;
@@ -21,17 +21,29 @@ void do_command(retranslator_s* retranslator);
 void do_help(void);
 void do_push(retranslator_s* retranslator);
 void do_pow(retranslator_s* retranslator);
+size_t find_file_size(const char* file_name);
 
 int main()
 {
-    FILE* file = fopen("source.asm", "r");
-    assert(file != 0);
+    size_t file_size0 = find_file_size("OneginText1251.txt");
 
-    unsigned char buffer[10000] = {};
+    char* buffer = (char*) calloc(file_size0 + 1, sizeof(char));
+    assert(buffer != NULL);
+
+    int text_command = open("source.asm", O_RDONLY);
+    assert(text_command != 0);
+
+    size_t file_size = read (text_command, buffer, file_size0 + 1);
+    assert(file_size != 0);
+    buffer[file_size] = '\0';
+
+    close(text_command);
+
+    unsigned char command_codes[1000] = {};
     retranslator_s retranslator = {
         .count = 0,
         .buffer = buffer,
-        .command = START_PROGRAM,
+        .command = START,
         .file_name = file
     };
 
@@ -46,9 +58,19 @@ int main()
     }
     printf("\n");
 
-    fclose(file);
-
     return 0;
+}
+
+size_t find_file_size(const char* file_name)
+{
+    assert (file_name != 0);
+
+    struct stat file_info = {0};
+    stat(file_name, &file_info);
+
+    assert(file_info.st_size != 0);
+
+    return file_info.st_size;
 }
 
 

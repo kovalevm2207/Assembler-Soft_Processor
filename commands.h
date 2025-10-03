@@ -11,6 +11,6 @@ typedef enum
     SQRT            = 8,
     RESET_STK       = 9,
     INVALID_COMMAND = 10,
-    START_PROGRAM   = 11,
+    START           = 11,
     END_PROGRAM     = 12
 } command_t;
