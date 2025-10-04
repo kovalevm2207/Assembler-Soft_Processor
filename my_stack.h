@@ -123,8 +123,6 @@ StackErr_t StackDtor_(stack_s* stk, const char* file, int line)
     stk->capacity = 0;
     stk = NULL;
 
-    STACK_OK
-
     return ALL_OK;
 }
 
@@ -148,6 +146,7 @@ int StackVerify(stack_s* stk, int STATUS) // todo add poisons
 void StackDump(stack_s* stk, int STATUS)
 {
     if (stk == NULL) {
+        printf("BAD_STK_PTR\n");
         STATUS |= BAD_STK_PTR;
         return;
     }

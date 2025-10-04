@@ -1,62 +1,97 @@
 #include <stdio.h>
-#include <stdlib.h>    // для calloc, malloc, free
-#include <string.h>    // для работы со строками
-#include <fcntl.h>     // для O_RDONLY и других флагов
-#include <unistd.h>    // для open, read, close
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <sys/stat.h>
 #include <assert.h>
 
 #include "commands.h"
 #include "color_print.h"
 
-struct retranslator_s {
-    int count;
-    unsigned char* buffer;
-    command_t command;
-    FILE* file_name;
+const int MAX_COMMAND_LENGTH = 20;
+
+struct line
+{
+    size_t length;
+    char* ptr;
 };
 
-command_t find_command(retranslator_s* retranslator);
-void do_command(retranslator_s* retranslator);
-void do_help(void);
-void do_push(retranslator_s* retranslator);
-void do_pow(retranslator_s* retranslator);
+struct translator_s
+{
+    size_t linenum;
+    size_t count_line;
+    size_t code_num;
+    line* lines;
+    command_t command;
+    char* codes;
+};
+
+
 size_t find_file_size(const char* file_name);
+size_t count_lines(char* text);
+void get_lines(line*  lines, char* text);
+
+
+command_t find_and_translate_all_commands(translator_s* translator);
+void create_signature(char* code);
+void translate_command(translator_s* translator);
+void do_help(void);
+void find_arg(translator_s* translator);
+void print_result_code(translator_s* translator);
+int write_result_in_text_file(translator_s* translator);
 
 int main()
 {
-    size_t file_size0 = find_file_size("OneginText1251.txt");
+    size_t file_size0 = find_file_size("example1.asm");
 
-    char* buffer = (char*) calloc(file_size0 + 1, sizeof(char));
-    assert(buffer != NULL);
+    char* command_text = (char*) calloc(file_size0 + 1, sizeof(char));
+    assert(command_text != NULL);
 
-    int text_command = open("source.asm", O_RDONLY);
-    assert(text_command != 0);
+    int file = open("example1.asm", O_RDONLY);
+    assert(file != 0);
 
-    size_t file_size = read (text_command, buffer, file_size0 + 1);
+    size_t file_size = read (file, command_text, file_size0 + 1);
     assert(file_size != 0);
-    buffer[file_size] = '\0';
+    command_text[file_size] = '\0';
 
-    close(text_command);
+    close(file);
 
-    unsigned char command_codes[1000] = {};
-    retranslator_s retranslator = {
-        .count = 0,
-        .buffer = buffer,
+    size_t linenum = count_lines(command_text);
+    assert(linenum > 0);
+
+    line *command_lines = (line*) calloc(linenum, sizeof(line));
+    assert(command_lines != 0);
+    get_lines(command_lines, command_text);
+
+    char* command_codes = (char*) calloc(linenum * 2 + 6 /*password*/ + 1 /*version*/, sizeof(char));
+    assert(command_codes != NULL);
+
+    create_signature(command_codes);
+
+    translator_s translator = {
+        .linenum = linenum,
+        .count_line = 0,
+        .code_num = 7,
+        .lines = command_lines,
         .command = START,
-        .file_name = file
+        .codes = command_codes
     };
 
-    while (retranslator.command != END_PROGRAM) {
-        retranslator.command = find_command(&retranslator);
-        do_command(&retranslator);
-    };
-
-    printf("Result codes: ");
-    for (int i = 0; i < retranslator.count; i++) {
-        printf("%d ", buffer[i]);
+    if (find_and_translate_all_commands(&translator) == INVALID_COMMAND) {
+        printf(CHANGE_ON RED TEXT_COLOR "INVALID_COMMAND, please read help:\n" RESET);
+        do_help();
+        return 1;
     }
-    printf("\n");
+
+    command_codes[translator.code_num++] = '\0';
+
+    print_result_code(&translator);
+    write_result_in_text_file(&translator);
+
+    free(command_text);
+    free(command_lines);
+    free(command_codes);
 
     return 0;
 }
@@ -65,7 +100,7 @@ size_t find_file_size(const char* file_name)
 {
     assert (file_name != 0);
 
-    struct stat file_info = {0};
+    struct stat file_info = {};
     stat(file_name, &file_info);
 
     assert(file_info.st_size != 0);
@@ -74,73 +109,168 @@ size_t find_file_size(const char* file_name)
 }
 
 
-command_t find_command(retranslator_s* retranslator)
+size_t count_lines(char* text)
 {
-    char command[20] = {};
-    fscanf(retranslator->file_name, "%s", command);
-    if (strcmp(command,  "HELP") == 0) return HELP;
-    if (strcmp(command,  "PUSH") == 0) return PUSH;
-    if (strcmp(command,   "ADD") == 0) return ADD;
-    if (strcmp(command,   "SUB") == 0) return SUB;
-    if (strcmp(command,   "DIV") == 0) return DIV;
-    if (strcmp(command,   "OUT") == 0) return OUT;
-    if (strcmp(command,   "MUL") == 0) return MUL;
-    if (strcmp(command,   "POW") == 0) return POW;
-    if (strcmp(command,  "SQRT") == 0) return SQRT;
-    if (strcmp(command,   "HLT") == 0) return END_PROGRAM;
-    if (strcmp(command, "RESET") == 0) return RESET_STK;
-    else return INVALID_COMMAND;
+    assert (text != 0);
+
+    size_t linenum = 0;
+    for (size_t i = 0; text[i] != '\0'; i++) {
+        if (text[i] == '\n') {
+            linenum++;
+        }
+    }
+    assert(linenum != 0);
+
+    return linenum;
 }
 
 
-void do_command(retranslator_s* retranslator)
+void get_lines(line* lines, char* text)
 {
-    assert(retranslator != NULL);
+    assert (lines != 0);
+    assert (text != 0);
 
-    unsigned char* buffer = retranslator->buffer;
-    int count = retranslator->count;
-    command_t command = retranslator->command;
+    size_t count = 0, ptr_shift = 0;
 
-    if (command == END_PROGRAM) printf("You end the calc program\n");
-    if (command == HELP)      do_help();
-    if (command == PUSH)      do_push(retranslator);
-    if (command == ADD)       buffer[count++] = 2;
-    if (command == SUB)       buffer[count++] = 3;
-    if (command == DIV)       buffer[count++] = 4;
-    if (command == OUT)       buffer[count++] = 5;
-    if (command == MUL)       buffer[count++] = 6;
-    if (command == POW)       do_pow(retranslator);
-    if (command == SQRT)      buffer[count++] = 8;
-    if (command == RESET_STK) buffer[count++] = 9;
-    if (command == INVALID_COMMAND) {
-        printf(CHANGE_ON RED TEXT_COLOR "INVALID_COMMAND, "
-               CHANGE_ON RED TEXT_COLOR "please read help:\n" RESET);
-        do_help();
+    for (size_t letter = 0; text[letter] != '\0'; letter++) {
+        if (text[letter] == '\n' || text[letter] == ';') {
+            text[letter] = '\0';
+            lines[count].ptr = text + ptr_shift;
+            lines[count].length = (letter + 1) - ptr_shift;
+            ptr_shift = letter + 1;
+            count++;
+        }
+    }
+}
+
+
+void create_signature(char* code)
+{
+
+    memcpy(code, PASSWORD, 6);
+    code[6] = VERSION;
+}
+
+
+command_t find_and_translate_all_commands(translator_s* translator)
+{
+    assert(translator != NULL);
+
+    char command[MAX_COMMAND_LENGTH] = {};
+
+    for (; translator->count_line < translator->linenum; translator->count_line++) {
+        sscanf(translator->lines[translator->count_line].ptr, "%s", command);
+
+             if (strcmp(command,  "PUSH") == 0) {printf("%s  ", command);            translator->command = PUSH;     }
+        else if (strcmp(command,   "ADD") == 0) {printf("%s\n", command); getchar(); translator->command = ADD;      }
+        else if (strcmp(command,   "SUB") == 0) {printf("%s\n", command); getchar(); translator->command = SUB;      }
+        else if (strcmp(command,   "DIV") == 0) {printf("%s\n", command); getchar(); translator->command = DIV;      }
+        else if (strcmp(command,   "OUT") == 0) {printf("%s\n", command); getchar(); translator->command = OUT;      }
+        else if (strcmp(command,   "MUL") == 0) {printf("%s\n", command); getchar(); translator->command = MUL;      }
+        else if (strcmp(command,   "POW") == 0) {printf("%s  ", command);            translator->command = POW;      }
+        else if (strcmp(command,  "SQRT") == 0) {printf("%s\n", command); getchar(); translator->command = SQRT;     }
+        else if (strcmp(command,   "HLT") == 0) {printf("%s\n", command); getchar(); translator->command = HLT;      }
+        else if (strcmp(command, "RESET") == 0) {printf("%s\n", command); getchar(); translator->command = RESET_STK;}
+        else return INVALID_COMMAND;
+
+        translate_command(translator);
+
+        memset(command, 0, sizeof(command));
     }
 
-    retranslator->count = count;
+    return translator->command;
 }
 
 
-void do_push(retranslator_s* retranslator)
+void translate_command(translator_s* translator)
 {
-    assert(retranslator != NULL);
+    assert(translator != NULL);
 
-    retranslator->buffer[retranslator->count++] = 1;
+    char* codes = translator->codes;
+    command_t command = translator->command;
+    size_t* count = &(translator->code_num);
+
+    switch (command) {
+        case HLT:
+                codes[(*count)++] = HLT;
+                printf("You end the calc program\n");
+                break;
+        case HELP:
+                do_help();
+                break;
+        case PUSH:
+                codes[(*count)++] = PUSH;
+                find_arg(translator);
+                break;
+        case ADD:
+                codes[(*count)++] = ADD;
+                break;
+        case SUB:
+                codes[(*count)++] = SUB;
+                break;
+        case DIV:
+                codes[(*count)++] = DIV;
+                break;
+        case OUT:
+                codes[(*count)++] = OUT;
+                break;
+        case MUL:
+                codes[(*count)++] = MUL;
+                break;
+        case POW:
+                codes[(*count)++] = POW;
+                find_arg(translator);
+                break;
+        case SQRT:
+                codes[(*count)++] = SQRT;
+                break;
+        case RESET_STK:
+                codes[(*count)++] = RESET_STK;
+                break;
+        case START:
+        case INVALID_COMMAND:
+                break;
+        default:
+            break;
+    }
+}
+
+
+void find_arg(translator_s* translator)
+{
+    assert(translator != NULL);
+
     int data = 0;
-    fscanf(retranslator->file_name, "%d", &data);
-    retranslator->buffer[retranslator->count++] = data;
+
+    if (sscanf(translator->lines[translator->count_line].ptr,"%*s %d", &data) != 1) {
+        printf(CHANGE_ON RED TEXT_COLOR "Missing argument for a function that must have an argument\n" RESET);
+        do_help();
+        exit(EXIT_FAILURE); // todo abort is a murder
+    }
+    printf("arg = %d\n", data);
+    getchar();
+    translator->codes[translator->code_num++] = data;
+}
+
+void print_result_code(translator_s* translator)
+{
+    printf("Result codes: ");
+        for (size_t i = 0; i < translator->code_num; i++) {
+            printf("%d ", translator->codes[i]);
+        }
+        printf("\n");
 }
 
 
-void do_pow(retranslator_s* retranslator)
+int write_result_in_text_file(translator_s* translator)
 {
-    assert(retranslator != NULL);
+    FILE* file = fopen("code_bin.asm", "wb");
 
-    retranslator->buffer[retranslator->count++] = 7;
-    int n = 0;
-    fscanf(retranslator->file_name, "%d", &n);
-    retranslator->buffer[retranslator->count++] = n;
+
+    fwrite(translator->codes, sizeof(char), translator->code_num, file);
+
+    fclose(file);
+    return 0;
 }
 
 
