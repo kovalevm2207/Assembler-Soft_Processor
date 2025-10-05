@@ -15,7 +15,7 @@ const size_t POISON = 0xABCCBA;
 
 typedef enum
 {
-    ALL_OK              = 0 << 0,
+    ALL_OK              = 1 << 0,
     BAD_DATA_PTR        = 1 << 1,
     BAD_SIZE_L          = 1 << 2,
     BAD_SIZE_R          = 1 << 3,
@@ -24,7 +24,8 @@ typedef enum
     BAD_STK_PTR         = 1 << 6,
     BAD_VALUE           = 1 << 7,
     LEFT_CANARY_DEAD    = 1 << 8,
-    RIGHT_CANARY_DEAD   = 1 << 9
+    RIGHT_CANARY_DEAD   = 1 << 9,
+    BAD_PRINT_DATA      = 1 << 10
 } StackErr_t;
 
 struct stack_s
@@ -32,6 +33,7 @@ struct stack_s
     stack_t* data;
     size_t size;
     size_t capacity;
+    int STATUS;
 };
 
 StackErr_t StackCtor_(stack_s* stk, size_t capacity, const char* file, int line);
@@ -44,29 +46,41 @@ StackErr_t StackDtor_(stack_s* stk, const char* file, int line);
 #define StackPop(stk, value) StackPop_(stk, value, __FILE__, __LINE__)
 #define StackDtor(stk) StackDtor_(stk, __FILE__, __LINE__)
 
-int StackVerify(stack_s* stk, int STATUS); // todo rename (add Stack)
-void StackDump(stack_s* stk, int STATUS);
+StackErr_t StackVerify(stack_s* stk, int STATUS); // todo rename (add Stack)
+StackErr_t StackDump(stack_s* stk);
+StackErr_t print_data(stack_s* stk);
 void do_RCanaryErr(stack_s* stk);
 void do_LCanaryErr(stack_s* stk);
-void print_data(stack_s* stk, int STATUS);
 
 
-#define START_OK if (capacity > MAXSIZE) STATUS |= BAD_START_CAPACITY;                              \
-    if (stk == NULL) STATUS |= BAD_STK_PTR;                                                         \
+#define START_OK                                                                                    \
+    if (capacity > MAXSIZE) STATUS |= BAD_START_CAPACITY;                                           \
+    if (stk == NULL) {                                                                              \
+        STATUS |= BAD_STK_PTR;                                                                      \
+        return (StackErr_t) STATUS;                                                                 \
+    }                                                                                               \
     if (STATUS != ALL_OK) {                                                                         \
         printf("\n" CHANGE_ON BOLD WITH LIGHT_RED TEXT_COLOR "StackDump() from %s at %s:%d\n" RESET,\
         __func__, file, line);                                                                      \
-        StackDump(stk, STATUS);                                                                     \
+        StackDump(stk);                                                                             \
         return (StackErr_t) STATUS;                                                                 \
     }
 
-#define STACK_OK STATUS = StackVerify(stk, STATUS);                                                 \
+#define STACK_OK                                                                                    \
+    STATUS = StackVerify(stk, STATUS);                                                              \
     if (STATUS != ALL_OK) {                                                                         \
         printf("\n" CHANGE_ON BOLD WITH LIGHT_RED TEXT_COLOR "StackDump() from %s at %s:%d\n" RESET,\
         __func__, file, line);                                                                      \
-        StackDump(stk, STATUS);                                                                     \
+        if (STATUS & BAD_STK_PTR)  {                                                                \
+            printf("BAD_STK_PTR(%d) ", BAD_STK_PTR);                                                \
+            printf(RESET "\n");                                                                     \
+            return  (StackErr_t) STATUS;                                                            \
+        }                                                                                           \
+        stk->STATUS = STATUS;                                                                       \
+        stk->STATUS |= StackDump(stk);                                                              \
         return (StackErr_t) STATUS;                                                                 \
-    }
+    }                                                                                               \
+    stk->STATUS = STATUS;
 
 StackErr_t StackCtor_(stack_s* stk, size_t capacity, const char* file, int line)
 {
@@ -79,7 +93,9 @@ StackErr_t StackCtor_(stack_s* stk, size_t capacity, const char* file, int line)
     stk->data[0] = L_CANARY;
     stk->data[capacity + 1] = R_CANARY;
     for (size_t i = 1; i < capacity + 1; i++) stk->data[i] = POISON;
+
     STACK_OK
+
     return ALL_OK;
 }
 
@@ -126,11 +142,11 @@ StackErr_t StackDtor_(stack_s* stk, const char* file, int line)
     return ALL_OK;
 }
 
-int StackVerify(stack_s* stk, int STATUS) // todo add poisons
+StackErr_t StackVerify(stack_s* stk, int STATUS) // todo add poisons
 {
     if (stk == NULL) {
        STATUS |= BAD_STK_PTR;
-       return STATUS;
+       return (StackErr_t) STATUS;
     }
     if (stk->capacity > MAXSIZE)                  STATUS |= BAD_STK_CAPACITY;
     if (stk->size > stk->capacity + 1)            STATUS |= BAD_SIZE_R;
@@ -140,45 +156,50 @@ int StackVerify(stack_s* stk, int STATUS) // todo add poisons
         if (stk->data[0] != L_CANARY)                 STATUS |= LEFT_CANARY_DEAD;
         if (stk->data[stk->capacity + 1] != R_CANARY) STATUS |= RIGHT_CANARY_DEAD;
     }
-    return STATUS;
+    return (StackErr_t) STATUS;
 }
 
-void StackDump(stack_s* stk, int STATUS)
+StackErr_t StackDump(stack_s* stk)
 {
     if (stk == NULL) {
         printf("BAD_STK_PTR\n");
-        STATUS |= BAD_STK_PTR;
-        return;
+        return BAD_STK_PTR;
     }
-    if (STATUS & ALL_OK) {
-        printf(CHANGE_ON BOLD WITH GREEN TEXT_COLOR "ALL_OK(%d) ", ALL_OK);
-        return;
-    }
+
+    int STATUS = stk->STATUS;
 
     printf("stack " CHANGE_ON GREEN TEXT_COLOR "<int>" CHANGE_ON BLUE TEXT_COLOR
            "       [0x%lx]" RESET " ____________________________ ", (uintptr_t)stk);
-    printf(CHANGE_ON BOLD WITH LIGHT_RED TEXT_COLOR "ERROR! ");
+    if (STATUS & ALL_OK) printf(CHANGE_ON BOLD WITH GREEN TEXT_COLOR "ALL_OK(%d) ", ALL_OK);
+    else printf(CHANGE_ON RED TEXT_COLOR "ERROR! ");
 
     if (STATUS & BAD_VALUE)              printf("BAD_VALUE(%d) ",    BAD_VALUE);
     if (STATUS & BAD_START_CAPACITY)     printf("BAD_START_CAPACITY(%d) ",    BAD_START_CAPACITY);
-    if (STATUS & BAD_STK_PTR)  {
-        printf("BAD_STK_PTR(%d) ", BAD_STK_PTR);
-        printf(RESET "\n");
-        return;
-    }
 
-    if (STATUS & BAD_SIZE_R)        printf("BAD_SIZE_RIGHT(%d) ", BAD_SIZE_R);
-    if (STATUS & BAD_SIZE_L)        printf("BAD_SIZE_LEFT(%d) ", BAD_SIZE_L);
-    if (STATUS & BAD_STK_CAPACITY)  printf("BAD_STK_CAPACITY(%d) ", BAD_STK_CAPACITY);
-    if (STATUS & BAD_DATA_PTR)      printf("BAD_DATA_PTR(%d) ", BAD_DATA_PTR);
-    if (STATUS & LEFT_CANARY_DEAD)  printf("LEFT_CANARY_DEAD(%d) ", LEFT_CANARY_DEAD);
-    if (STATUS & RIGHT_CANARY_DEAD) printf("RIGHT_CANARY_DEAD(%d) ", RIGHT_CANARY_DEAD);
+    if (STATUS & BAD_SIZE_R)             printf("BAD_SIZE_RIGHT(%d) ", BAD_SIZE_R);
+    if (STATUS & BAD_SIZE_L)             printf("BAD_SIZE_LEFT(%d) ", BAD_SIZE_L);
+    if (STATUS & BAD_STK_CAPACITY)       printf("BAD_STK_CAPACITY(%d) ", BAD_STK_CAPACITY);
+    if (STATUS & BAD_DATA_PTR)           printf("BAD_DATA_PTR(%d) ", BAD_DATA_PTR);
+    if (STATUS & LEFT_CANARY_DEAD)       printf("LEFT_CANARY_DEAD(%d) ", LEFT_CANARY_DEAD);
+    if (STATUS & RIGHT_CANARY_DEAD)      printf("RIGHT_CANARY_DEAD(%d) ", RIGHT_CANARY_DEAD);
+
     printf(RESET "\n");
-    print_data(stk, STATUS);
+
+    stk->STATUS |= print_data(stk);
+    if (stk->STATUS & BAD_PRINT_DATA) return BAD_PRINT_DATA;
+
+    return ALL_OK;
 }
 
-void print_data(stack_s* stk, int STATUS)
+StackErr_t print_data(stack_s* stk)
 {
+    if (stk == NULL) {
+        printf(CHANGE_ON RED TEXT_COLOR "BAD_PRINT_DATA(%d) " RESET, BAD_PRINT_DATA);
+        return BAD_PRINT_DATA;
+    }
+
+    int STATUS = stk->STATUS;
+
     printf(RESET "\n");
         printf("{\n");
         printf(CHANGE_ON GREEN TEXT_COLOR "    size       " CHANGE_ON BLUE TEXT_COLOR  "%zu"  RESET "\n", stk->size - 1);
@@ -197,6 +218,8 @@ void print_data(stack_s* stk, int STATUS)
     printf("    }\n\n");
     }
     printf("}\n");
+
+    return ALL_OK;
 }
 
 

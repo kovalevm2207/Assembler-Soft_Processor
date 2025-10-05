@@ -9,12 +9,13 @@
 #include "commands.h"
 #include "my_stack.h"
 
-const size_t CAPACITY = 100;
+const size_t CAPACITY = 15;
 
 typedef enum
 {
     SUCCESSFUL_EXECUTION = 1 << 1,
-    COMMAND_NOT_FOUND    = 1 << 2
+    COMMAND_NOT_FOUND    = 1 << 2,
+    PROGRAM_END_MISSING  = 1 << 3
 } DoCodeErr_t;
 
 typedef enum
@@ -73,7 +74,6 @@ int main()
     }
 
     if(do_code(&spu) != SUCCESSFUL_EXECUTION) {
-        printf("SUCCESSFUL_EXECUTION\n");
         return 1;
     }
 
@@ -152,6 +152,10 @@ DoCodeErr_t do_code(SPU* spu)
                 getchar();
 
                 StackPush(stk, data);
+
+                StackDump(stk);
+                getchar();
+
                 break;
             }
             case ADD: {
@@ -164,6 +168,10 @@ DoCodeErr_t do_code(SPU* spu)
 
                 stack_t c = a + b;
                 StackPush(stk, c);
+
+                StackDump(stk);
+                getchar();
+
                 break;
             }
             case SUB: {
@@ -176,6 +184,10 @@ DoCodeErr_t do_code(SPU* spu)
 
                 stack_t c = b - a;
                 StackPush(stk, c);
+
+                StackDump(stk);
+                getchar();
+
                 break;
             }
             case DIV: {
@@ -188,6 +200,10 @@ DoCodeErr_t do_code(SPU* spu)
 
                 stack_t c = b / a;
                 StackPush(stk, c);
+
+                StackDump(stk);
+                getchar();
+
                 break;
             }
             case OUT: {
@@ -196,6 +212,10 @@ DoCodeErr_t do_code(SPU* spu)
 
                 printf("OUT(PC = %zu) -> %d\n", *PC, data);;
                 getchar();
+
+                StackDump(stk);
+                getchar();
+
 
                 break;
             }
@@ -209,6 +229,10 @@ DoCodeErr_t do_code(SPU* spu)
 
                 stack_t c = a * b;
                 StackPush(stk, c);
+
+                StackDump(stk);
+                getchar();
+
                 break;
             }
             case POW: {
@@ -222,6 +246,10 @@ DoCodeErr_t do_code(SPU* spu)
 
                 stack_t c = pow(a,n);
                 StackPush(stk, c);
+
+                StackDump(stk);
+                getchar();
+
                 break;
             }
             case SQRT: {
@@ -233,6 +261,10 @@ DoCodeErr_t do_code(SPU* spu)
 
                 stack_t b = sqrt(a);
                 StackPush(stk, b);
+
+                StackDump(stk);
+                getchar();
+
                 break;
             }
             case RESET_STK: {
@@ -241,9 +273,14 @@ DoCodeErr_t do_code(SPU* spu)
 
                 StackDtor(stk);
                 StackCtor(stk, CAPACITY);
+
+                StackDump(stk);
+                getchar();
+
                 break;
             }
             case HLT:
+
                 printf("HLT(PC = %zu)\n", *PC);
                 getchar();
 
@@ -253,5 +290,5 @@ DoCodeErr_t do_code(SPU* spu)
         }
         (*PC)++;
     }
-    return SUCCESSFUL_EXECUTION;
+    return PROGRAM_END_MISSING;
 }
