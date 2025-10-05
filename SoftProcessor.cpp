@@ -40,12 +40,12 @@ DoCodeErr_t do_code(SPU* spu);
 
 int main()
 {
-    size_t file_size0 = find_file_size("code_bin.asm");
+    size_t file_size0 = find_file_size("code1.bin");
 
     char* code = (char*) calloc(file_size0 + 1, sizeof(char));
     assert(code != NULL);
 
-    int file = open("code_bin.asm", O_RDONLY);
+    int file = open("code1.bin", O_RDONLY);
     assert(file != 0);
 
     size_t file_size = read (file, code, file_size0 + 1);
