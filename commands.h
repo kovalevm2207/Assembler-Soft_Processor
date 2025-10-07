@@ -1,4 +1,4 @@
-const int VERSION = 6;
+const int VERSION = 7;
 const char PASSWORD[] = "SPbSVU";
 
 typedef enum
@@ -15,9 +15,10 @@ typedef enum
     RESET_STK       = 9,      //=============================================//
     PUSHREG         = 10,
     POPREG          = 11,
-    START           = 12,
-    INVALID_COMMAND = 13,
-    HLT             = 14
+    JMP             = 12,
+    START           = 13,
+    INVALID_COMMAND = 14,
+    HLT             = 15
 } command_t;
 
 typedef enum

@@ -1,22 +1,17 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <assert.h>
 
 #include "commands.h"
 #include "color_print.h"
+#include "ReadFile.h"
 
 const int MAX_COMMAND_LENGTH = 20;
 const int MAX_REG_LENGTH = 5;
 
-struct line
-{
-    size_t length;
-    char* ptr;
-};
+
 
 struct translator_s
 {
@@ -27,11 +22,6 @@ struct translator_s
     command_t command;
     char* codes;
 };
-
-
-size_t find_file_size(const char* file_name);
-size_t count_lines(char* text);
-void get_lines(line*  lines, char* text);
 
 
 command_t find_and_translate_all_commands(translator_s* translator);
@@ -98,53 +88,6 @@ int main()
     return 0;
 }
 
-size_t find_file_size(const char* file_name)
-{
-    assert (file_name != 0);
-
-    struct stat file_info = {};
-    stat(file_name, &file_info);
-
-    assert(file_info.st_size != 0);
-
-    return file_info.st_size;
-}
-
-
-size_t count_lines(char* text)
-{
-    assert (text != 0);
-
-    size_t linenum = 0;
-    for (size_t i = 0; text[i] != '\0'; i++) {
-        if (text[i] == '\n') {
-            linenum++;
-        }
-    }
-    assert(linenum != 0);
-
-    return linenum;
-}
-
-
-void get_lines(line* lines, char* text)
-{
-    assert (lines != 0);
-    assert (text != 0);
-
-    size_t count = 0, ptr_shift = 0;
-
-    for (size_t letter = 0; text[letter] != '\0'; letter++) {
-        if (text[letter] == '\n' || text[letter] == ';') {
-            text[letter] = '\0';
-            lines[count].ptr = text + ptr_shift;
-            lines[count].length = (letter + 1) - ptr_shift;
-            ptr_shift = letter + 1;
-            count++;
-        }
-    }
-}
-
 
 void create_signature(char* code)
 {
@@ -165,8 +108,9 @@ command_t find_and_translate_all_commands(translator_s* translator)
 
              if (strcmp(command,     "PUSH") == 0) {printf("%s  ", command);            translator->command = PUSH;     }
         else if (strcmp(command,      "POW") == 0) {printf("%s  ", command);            translator->command = POW;      }
-        else if (strcmp(command,  "PUSHREG") == 0) {printf("%s  ", command);            translator->command = PUSHREG;}
-        else if (strcmp(command,   "POPREG") == 0) {printf("%s  ", command);            translator->command = POPREG;}
+        else if (strcmp(command,  "PUSHREG") == 0) {printf("%s  ", command);            translator->command = PUSHREG;  }
+        else if (strcmp(command,   "POPREG") == 0) {printf("%s  ", command);            translator->command = POPREG;   }
+        else if (strcmp(command,      "JMP") == 0) {printf("%s  ", command);            translator->command = JMP;      }
         else if (strcmp(command,      "ADD") == 0) {printf("%s\n", command); getchar(); translator->command = ADD;      }
         else if (strcmp(command,      "SUB") == 0) {printf("%s\n", command); getchar(); translator->command = SUB;      }
         else if (strcmp(command,      "DIV") == 0) {printf("%s\n", command); getchar(); translator->command = DIV;      }
@@ -238,6 +182,10 @@ void translate_command(translator_s* translator)
         case POPREG:
                 codes[(*count)++] = POPREG;
                 find_reg(translator);
+                break;
+        case JMP:
+                codes[(*count)++] = JMP;
+                find_arg(translator);
                 break;
         case START:
         case INVALID_COMMAND:

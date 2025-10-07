@@ -1,29 +1,24 @@
 #include <stdio.h>
 #include <math.h>
-#include <assert.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <sys/stat.h>
 #include <cstring>
 
 #include "commands.h"
 #include "my_stack.h"
+#include "ReadFile.h"
 
 const size_t CAPACITY = 15;
 
 typedef enum
 {
-    SUCCESSFUL_EXECUTION = 1 << 1,
-    COMMAND_NOT_FOUND    = 1 << 2,
-    PROGRAM_END_MISSING  = 1 << 3
-} DoCodeErr_t;
-
-typedef enum
-{
-    CORRECT_SIGNATURE = 1 << 1,
-    BAD_PASSWORD      = 1 << 2,
-    BAD_VERSION       = 1 << 3
-} SignatureErr_t;
+    PROCESSOR_OK         = 1 << 1,
+    COMMAND_NOT_FOUND    = 1 << 3,
+    PROGRAM_END_MISSING  = 1 << 4,
+    BAD_PUSH             = 1 << 5,
+    BAD_PASSWORD         = 1 << 7,
+    BAD_VERSION          = 1 << 8
+} ProcessorErr_t;
 
 typedef struct SPU
 {
@@ -31,21 +26,23 @@ typedef struct SPU
     size_t PC;
     stack_s stk;
     int* regs;
+    size_t file_size;
 }SPU;
 
-size_t find_file_size(const char* file_name);
-void print(char* code);
-SignatureErr_t check_signature(char* code);
-DoCodeErr_t do_code(SPU* spu);
+ProcessorErr_t ProcessorCtor(SPU* spu, char* code, int* regs, size_t file_size);
+ProcessorErr_t check_signature(char* code);
+ProcessorErr_t ProcessorExe(SPU* spu);
+ProcessorErr_t ProcessorDtor(SPU* spu);
+ProcessorErr_t ProcessorDump(SPU* spu);
 
 int main()
 {
-    size_t file_size0 = find_file_size("code1.bin");
+    size_t file_size0 = find_file_size("code2.bin");
 
     char* code = (char*) calloc(file_size0 + 1, sizeof(char));
     assert(code != NULL);
 
-    int file = open("code1.bin", O_RDONLY);
+    int file = open("code2.bin", O_RDONLY);
     assert(file != 0);
 
     size_t file_size = read (file, code, file_size0 + 1);
@@ -54,85 +51,92 @@ int main()
 
     close(file);
 
-    stack_s stk = {};
-    StackCtor(&stk, CAPACITY);
-    int regs[4] = {};
+    SPU spu = {};
+    int regs[4] = {/*AX, BX, CX, DX*/};
+    ProcessorCtor(&spu, code, regs, file_size);
 
-    SPU spu = {
-        .code = code,
-        .PC = 7,
-        .stk = stk,
-        .regs = regs
-    };
+    ProcessorExe(&spu);
 
-    print(code);
-
-    int sign_err = check_signature(code);
-    if (sign_err != CORRECT_SIGNATURE) {
-        printf("SIGNATURE ERROR\n");
-        return 1;
-    }
-
-    if(do_code(&spu) != SUCCESSFUL_EXECUTION) {
-        return 1;
-    }
-
-    StackDtor(&spu.stk);
-
-    free(code);
+    ProcessorDtor(&spu);
 
     return 0;
 }
 
 
-size_t find_file_size(const char* file_name)
+ProcessorErr_t ProcessorCtor(SPU* spu, char* code, int* regs, size_t file_size)
 {
-    assert (file_name != NULL);
+    int STATUS = PROCESSOR_OK;
+    STATUS |= check_signature(code);
 
-    struct stat file_info = {};
-    stat(file_name, &file_info);
+    stack_s stk = {};
+    STATUS |= StackCtor(&stk, CAPACITY);
+    printf("STATUS == %d\n", STATUS);
 
-    assert(file_info.st_size != 0);
+    spu->code = code;
+    spu->PC = 7;
+    spu->stk = stk;
+    spu->regs = regs;
+    spu->file_size = file_size;
 
-    return file_info.st_size;
+    if (STATUS & PROCESSOR_OK) return PROCESSOR_OK;
+    else                       return (ProcessorErr_t) STATUS;
 }
 
 
-void print(char* code)
+ProcessorErr_t check_signature(char* code)
 {
     assert(code != NULL);
 
-    int i = 0;
-    do {
-        printf("%2.d ", i);
-    } while(code[i++] != '\0');
-
-    printf("\n");
-
-    i = 0;
-
-    do {
-        printf("%2.d ", code[i]);
-    } while(code[i++] != '\0');
-
-    printf("\n");
-}
-
-
-SignatureErr_t check_signature(char* code)
-{
-    assert(code != NULL);
-
-    int sign_err = CORRECT_SIGNATURE;
+    int sign_err = PROCESSOR_OK;
 
     if (code[6] != VERSION)              sign_err |= BAD_VERSION;
     if (strncmp(code, PASSWORD, 6) != 0) sign_err |= BAD_PASSWORD;
 
-    return (SignatureErr_t) sign_err;
+    return (ProcessorErr_t) sign_err;
 }
 
 
-DoCodeErr_t do_code(SPU* spu)
+ProcessorErr_t ProcessorDtor(SPU* spu)
+{
+    StackDtor(&spu->stk);
+    spu->PC = 0;
+    for (int i = 0; i < 4; i++) {
+        spu->regs[i] = 0;
+    }
+    free(spu->code);
+
+    return PROCESSOR_OK;
+}
+
+
+ProcessorErr_t ProcessorDump(SPU* spu)
+{
+    printf(CHANGE_ON GREEN TEXT_COLOR "ProcessorDump()\n" RESET);
+    StackDump(&spu->stk);
+    printf("code:\n");
+    printf("PC:" CHANGE_ON PURPLE TEXT_COLOR);
+    for (size_t i = 0; i < spu->file_size; i++) {
+        if (i == 6)  printf(CHANGE_ON YELLOW TEXT_COLOR);
+        if (i > 6) printf(RESET);
+        printf("  %3zu", i);
+    }
+    printf("\n   ");
+    for (size_t i = 0; i < spu->file_size; i++) {
+        if (i < 6) printf("  %3c", spu->code[i]);
+        else       printf("  %3d", spu->code[i]);
+    }
+    printf("\n   ");
+    for (size_t i = 0; i < spu->file_size; i++) {
+        if (i == spu->PC) printf("--" CHANGE_ON BOLD WITH RED TEXT_COLOR "^^^" RESET);
+        else              printf("-----");
+    }
+    printf("\n" CHANGE_ON PURPLE TEXT_COLOR "       PASSWORD    " CHANGE_ON YELLOW TEXT_COLOR  "        VERSION\n" RESET);
+    printf("regs:   AX = [%d], BX = [%d], CX = [%d], DX = [%d]\n", spu->regs[0], spu->regs[1], spu->regs[2], spu->regs[3]);
+    return PROCESSOR_OK;
+}
+
+
+ProcessorErr_t ProcessorExe(SPU* spu)
 {
     assert(spu != NULL);
 
@@ -144,18 +148,11 @@ DoCodeErr_t do_code(SPU* spu)
     while (code[*PC] != '\0') {
         switch(code[*PC]) {
             case PUSH: {
-                printf("PUSH(PC = %zu) -> ", (*PC)++);
-
-                stack_t data = code[*PC];
-
-                printf("data(PC = %zu) = %d\n", *PC, data);
-                getchar();
+                stack_t data = code[++(*PC)];
 
                 StackPush(stk, data);
-
-                StackDump(stk);
+                ProcessorDump(spu);
                 getchar();
-
                 break;
             }
             case ADD: {
@@ -163,15 +160,11 @@ DoCodeErr_t do_code(SPU* spu)
                 StackPop(stk, &a);
                 StackPop(stk, &b);
 
-                printf("ADD(PC = %zu) -> %d + %d\n ", *PC, a, b);
-                getchar();
-
                 stack_t c = a + b;
                 StackPush(stk, c);
 
-                StackDump(stk);
+                ProcessorDump(spu);
                 getchar();
-
                 break;
             }
             case SUB: {
@@ -179,15 +172,11 @@ DoCodeErr_t do_code(SPU* spu)
                 StackPop(stk, &a);
                 StackPop(stk, &b);
 
-                printf("SUB(PC = %zu) -> %d - %d\n", *PC, b, a);
-                getchar();
-
                 stack_t c = b - a;
                 StackPush(stk, c);
 
-                StackDump(stk);
+                ProcessorDump(spu);
                 getchar();
-
                 break;
             }
             case DIV: {
@@ -195,28 +184,21 @@ DoCodeErr_t do_code(SPU* spu)
                 StackPop(stk, &a);
                 StackPop(stk, &b);
 
-                printf("DIV(PC = %zu) -> %d / %d", *PC, b, a);
-                getchar();
-
                 stack_t c = b / a;
                 StackPush(stk, c);
 
-                StackDump(stk);
+                ProcessorDump(spu);
                 getchar();
-
                 break;
             }
             case OUT: {
                 stack_t data = 0;
                 StackPop(stk, &data);
 
-                printf("OUT(PC = %zu) -> %d\n", *PC, data);;
+                printf("answer = %10d\n", data);
+
+                ProcessorDump(spu);
                 getchar();
-
-                StackDump(stk);
-                getchar();
-
-
                 break;
             }
             case MUL: {
@@ -224,67 +206,71 @@ DoCodeErr_t do_code(SPU* spu)
                 StackPop(stk, &a);
                 StackPop(stk, &b);
 
-                printf("MUL(PC = %zu) -> %d * %d\n", *PC, a, b);
-                getchar();
-
                 stack_t c = a * b;
                 StackPush(stk, c);
 
-                StackDump(stk);
+                ProcessorDump(spu);
                 getchar();
-
                 break;
             }
             case POW: {
-                printf("POW(PC = %zu) -> ", (*PC)++);
-
-                stack_t a = 0, n = code[*PC];
+                stack_t a = 0, n = code[++(*PC)];
                 StackPop(stk, &a);
-
-                printf("%d ^ n(PC = %zu) = %d\n", a, *PC, n);
-                getchar();
 
                 stack_t c = pow(a,n);
                 StackPush(stk, c);
 
-                StackDump(stk);
+                ProcessorDump(spu);
                 getchar();
-
                 break;
             }
             case SQRT: {
                 stack_t a = 0;
                 StackPop(stk, &a);
 
-                printf("SQRT(PC = %zu) -> sqrt(%d)\n", *PC, a);
-                getchar();
-
                 stack_t b = sqrt(a);
                 StackPush(stk, b);
 
-                StackDump(stk);
+                ProcessorDump(spu);
                 getchar();
-
                 break;
             }
             case RESET_STK: {
-                printf("RESET_STK(PC = %zu)\n", *PC);
-                getchar();
-
                 StackDtor(stk);
                 StackCtor(stk, CAPACITY);
 
-                StackDump(stk);
+                ProcessorDump(spu);
                 getchar();
+                break;
+            }
+            case PUSHREG: {
+                reg_t reg = (reg_t) code[++(*PC)];
 
+                StackPush(stk, regs[reg]);
+
+                ProcessorDump(spu);
+                getchar();
+                break;
+            }
+            case POPREG: {
+                reg_t reg = (reg_t) code[++(*PC)];
+
+                StackPop(stk, &regs[reg]);
+
+                ProcessorDump(spu);
+                getchar();
+                break;
+            }
+            case JMP: {
+                int new_pc = code[++(*PC)];
+                *PC = new_pc;
+
+                ProcessorDump(spu);
+                getchar();
                 break;
             }
             case HLT:
-
-                printf("HLT(PC = %zu)\n", *PC);
-                getchar();
-
-                return SUCCESSFUL_EXECUTION;
+                return PROCESSOR_OK;
             default:
                 return COMMAND_NOT_FOUND;
         }
