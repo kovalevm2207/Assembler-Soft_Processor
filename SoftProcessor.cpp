@@ -134,21 +134,25 @@ ProcessorErr_t ProcessorDump(SPU* spu)
     StackDump(&spu->stk);
     printf("code:\n");
     printf("PC:" CHANGE_ON PURPLE TEXT_COLOR);
-    for (size_t i = 2; i < spu->file_size/sizeof(int); i++) {
+    for (size_t i = 2; i < spu->file_size/sizeof(int);) {
         printf(CHANGE_ON PURPLE TEXT_COLOR);
-        for (size_t j = i; ((j+1) % 30) != 0 && j < spu->file_size/sizeof(int); j++) {
+        for (size_t j = i; j < i + 30 && j < spu->file_size/sizeof(int); j++) {
             printf(" %3zu", j);
         }
         printf(RESET "\n   ");
-        for (size_t j = i; ((j+1) % 30) != 0 && j < spu->file_size/sizeof(int); j++) {
+        for (size_t j = i; j < i + 30 && j < spu->file_size/sizeof(int); j++) {
             printf(" %3d", spu->code[j]);
         }
         printf("\n   ");
-        for (; ((i+1) % 30) != 0 && i < spu->file_size/sizeof(int); i++) {
-            if (i == spu->PC) printf("-" CHANGE_ON BOLD WITH RED TEXT_COLOR "^^^" RESET);
+        for (size_t j = i; j < i + 30 && j < spu->file_size/sizeof(int); j++) {
+            if (j == spu->PC) printf("-" CHANGE_ON BOLD WITH RED TEXT_COLOR "^^^" RESET);
             else              printf("----");
         }
         printf(RESET"\n   ");
+
+        size_t next_i = i + 30;
+        if (next_i >= spu->file_size/sizeof(int)) break;
+        i = next_i;
     }
     printf("\n" CHANGE_ON PURPLE TEXT_COLOR "       PASSWORD    " CHANGE_ON YELLOW TEXT_COLOR  "        VERSION\n" RESET);
     printf("regs:   AX = [%d], BX = [%d], CX = [%d], DX = [%d], SX[%d]\n", spu->regs[0], spu->regs[1], spu->regs[2], spu->regs[3], spu->regs[4]);
