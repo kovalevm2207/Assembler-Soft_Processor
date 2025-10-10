@@ -1,3 +1,6 @@
+#ifndef READ_FILE
+#define READ_FILE
+
 #include <sys/stat.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -71,3 +74,5 @@ void get_lines(line* lines, char* text)
         }
     }
 }
+
+#endif // READ_FILE

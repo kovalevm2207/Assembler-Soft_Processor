@@ -1,3 +1,6 @@
+#ifndef COMMANDS
+#define COMMANDS
+
 const int VERSION = 9;
 const char SIGNATURE[4] = "SVU";
 
@@ -36,3 +39,5 @@ typedef enum
     DX = 3,
     SX = 4
 } reg_t;
+
+#endif // COMMANDS

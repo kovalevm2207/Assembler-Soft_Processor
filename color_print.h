@@ -1,3 +1,6 @@
+#ifndef COLOR_PRINT
+#define COLOR_PRINT
+
 // command
 
 #define  CHANGE_ON         "\033["
@@ -48,3 +51,5 @@
 #define  LIGHT_BLUE_BACK   "104"
 #define  LIGHT_PURPLE_BACK "105"
 #define  TURCUOISE_BACK    "106"
+
+#endif // COLOR_PRINT
