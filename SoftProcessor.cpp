@@ -17,7 +17,7 @@ typedef enum
     COMMAND_NOT_FOUND    = 1 << 2,
     PROGRAM_END_MISSING  = 1 << 3,
     BAD_PUSH             = 1 << 4,
-    BAD_SIGNATURE         = 1 << 5,
+    BAD_SIGNATURE        = 1 << 5,
     BAD_VERSION          = 1 << 6
 } ProcessorErr_t;
 
