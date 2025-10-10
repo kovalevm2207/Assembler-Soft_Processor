@@ -11,6 +11,8 @@ DED_FLAGS = -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggressive-loop-optim
 		    -Wstack-usage=8192 -pie -fPIE -Werror=vla \
 		    -fsanitize=address,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,integer-divide-by-zero,leak,nonnull-attribute,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,undefined,unreachable,vla-bound,vptr
 
+MODE?=
+
 CPP_FILES = $(wildcard *.cpp)
 OBJECT_FILES = $(CPP_FILES:.cpp=.o)
 HEADER_FILES = $(wildcard *.h)
@@ -19,17 +21,17 @@ HEADER_FILES = $(wildcard *.h)
 all: soft_processor assembler
 
 soft_processor: SoftProcessor.o
-	@g++ $(DED_FLAGS) SoftProcessor.o -o soft_processor
+	@g++ $(DED_FLAGS) $(MODE) SoftProcessor.o -o soft_processor
 
 assembler: assambler.o
-	@g++ $(DED_FLAGS) assambler.o -o assembler
+	@g++ $(DED_FLAGS) $(MODE) assambler.o -o assembler
 
 # Объектные файлы
 assambler.o: assambler.cpp $(HEADER_FILES)
-	@g++ $(DED_FLAGS) -c assambler.cpp -o assambler.o
+	@g++ $(DED_FLAGS) $(MODE) -c assambler.cpp -o assambler.o
 
 SoftProcessor.o: SoftProcessor.cpp $(HEADER_FILES)
-	@g++ $(DED_FLAGS) -c SoftProcessor.cpp -o SoftProcessor.o
+	@g++ $(DED_FLAGS) $(MODE) -c SoftProcessor.cpp -o SoftProcessor.o
 
 clean:
 

@@ -1,5 +1,5 @@
-const int VERSION = 7;
-const char PASSWORD[] = "SPbSVU";
+const int VERSION = 9;
+const char PASSWORD[4] = "SVU";
 
 typedef enum
 {
@@ -16,9 +16,16 @@ typedef enum
     PUSHREG         = 10,
     POPREG          = 11,
     JMP             = 12,
-    START           = 13,
-    INVALID_COMMAND = 14,
-    HLT             = 15
+    JB              = 13, // <
+    JBE             = 14, // <=
+    JA              = 15, // >
+    JAE             = 16, // >=
+    JE              = 17, // ==
+    JNE             = 18, // !=
+    IN              = 19,
+    START           = 20,
+    INVALID_COMMAND = 21,
+    HLT             = 22
 } command_t;
 
 typedef enum
@@ -26,5 +33,6 @@ typedef enum
     AX = 0,
     BX = 1,
     CX = 2,
-    DX = 3
+    DX = 3,
+    SX = 4
 } reg_t;

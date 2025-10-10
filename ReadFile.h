@@ -50,7 +50,19 @@ void get_lines(line* lines, char* text)
     size_t count = 0, ptr_shift = 0;
 
     for (size_t letter = 0; text[letter] != '\0'; letter++) {
-        if (text[letter] == '\n' || text[letter] == ';') {
+        //printf("%c ", text[letter]);
+        if (text[letter] == '#') {
+            text[letter] = '\0';
+            letter++;
+            while(text[letter] != '\n') {
+                letter++;
+            }
+            lines[count].ptr = text + ptr_shift;
+            lines[count].length = (letter + 1) - ptr_shift;
+            ptr_shift = letter + 1;
+            count++;
+        }
+        else if (text[letter] == '\n') {
             text[letter] = '\0';
             lines[count].ptr = text + ptr_shift;
             lines[count].length = (letter + 1) - ptr_shift;
