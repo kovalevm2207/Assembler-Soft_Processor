@@ -17,7 +17,7 @@ typedef enum
     COMMAND_NOT_FOUND    = 1 << 2,
     PROGRAM_END_MISSING  = 1 << 3,
     BAD_PUSH             = 1 << 4,
-    BAD_PASSWORD         = 1 << 5,
+    BAD_SIGNATURE         = 1 << 5,
     BAD_VERSION          = 1 << 6
 } ProcessorErr_t;
 
@@ -31,7 +31,7 @@ typedef struct SPU
 } SPU;
 
 ProcessorErr_t ProcessorCtor(SPU* spu, int* code);
-ProcessorErr_t check_signature(int* code);
+ProcessorErr_t check_heder(int* code);
 ProcessorErr_t ProcessorExe(SPU* spu);
 ProcessorErr_t ProcessorDtor(SPU* spu);
 ProcessorErr_t ProcessorDump(SPU* spu);
@@ -78,7 +78,7 @@ ProcessorErr_t ProcessorCtor(SPU* spu, int* code)
     assert(code != NULL);
 
     int STATUS = PROCESSOR_OK;
-    STATUS |= check_signature(code);
+    STATUS |= check_heder(code);
 
     stack_s stk = {};
     STATUS |= StackCtor(&stk, CAPACITY);
@@ -95,7 +95,7 @@ ProcessorErr_t ProcessorCtor(SPU* spu, int* code)
 }
 
 
-ProcessorErr_t check_signature(int* code)
+ProcessorErr_t check_heder(int* code)
 {
     assert(code != NULL);
 
@@ -103,8 +103,8 @@ ProcessorErr_t check_signature(int* code)
 
     if (code[1] != VERSION)              sign_err |= BAD_VERSION;
     for(int i = 0; i < 4; i++) {
-        if (*((char*)code + i) != PASSWORD[i]) {
-            sign_err |= BAD_PASSWORD;
+        if (*((char*)code + i) != SIGNATURE[i]) {
+            sign_err |= BAD_SIGNATURE;
         }
     }
     return (ProcessorErr_t) sign_err;
@@ -154,7 +154,7 @@ ProcessorErr_t ProcessorDump(SPU* spu)
         if (next_i >= spu->file_size/sizeof(int)) break;
         i = next_i;
     }
-    printf("\n" CHANGE_ON PURPLE TEXT_COLOR "       PASSWORD    " CHANGE_ON YELLOW TEXT_COLOR  "        VERSION\n" RESET);
+    printf("\n" CHANGE_ON PURPLE TEXT_COLOR "       SIGNATURE    " CHANGE_ON YELLOW TEXT_COLOR  "        VERSION\n" RESET);
     printf("regs:   AX = [%d], BX = [%d], CX = [%d], DX = [%d], SX[%d]\n", spu->regs[0], spu->regs[1], spu->regs[2], spu->regs[3], spu->regs[4]);
     return PROCESSOR_OK;
 }
@@ -309,8 +309,8 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 break;
             }
             case JMP: {
-                int new_pc = code[++(*PC) - 1];
-                *PC = new_pc;
+                int new_pc = code[++(*PC)];
+                *PC = new_pc - 1;
 
                 #ifdef DUMP
                     ProcessorDump(spu);
@@ -324,8 +324,8 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 StackPop(stk, &a);
 
                 if (a < b) {
-                    int new_pc = code[++(*PC) - 1];
-                    *PC = new_pc;
+                    int new_pc = code[++(*PC)];
+                    *PC = new_pc - 1;
                 } else (*PC)++;
 
                 #ifdef DUMP
@@ -340,8 +340,8 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 StackPop(stk, &a);
 
                 if (a <= b) {
-                    int new_pc = code[++(*PC) - 1];
-                    *PC = new_pc;
+                    int new_pc = code[++(*PC)];
+                    *PC = new_pc - 1;
                 } else (*PC)++;
 
                 #ifdef DUMP
@@ -356,8 +356,8 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 StackPop(stk, &a);
 
                 if (a > b) {
-                    int new_pc = code[++(*PC) - 1];
-                    *PC = new_pc;
+                    int new_pc = code[++(*PC)];
+                    *PC = new_pc - 1;
                 } else (*PC)++;
 
                 #ifdef DUMP
@@ -372,8 +372,8 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 StackPop(stk, &a);
 
                 if (a >= b) {
-                    int new_pc = code[++(*PC) - 1];
-                    *PC = new_pc;
+                    int new_pc = code[++(*PC)];
+                    *PC = new_pc - 1;
                 } else (*PC)++;
 
                 #ifdef DUMP
@@ -388,8 +388,8 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 StackPop(stk, &a);
 
                 if (a == b) {
-                    int new_pc = code[++(*PC) - 1];
-                    *PC = new_pc;
+                    int new_pc = code[++(*PC)];
+                    *PC = new_pc - 1;
                 } else (*PC)++;
 
                 #ifdef DUMP
@@ -404,8 +404,8 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 StackPop(stk, &a);
 
                 if (a != b) {
-                    int new_pc = code[++(*PC) - 1];
-                    *PC = new_pc;
+                    int new_pc = code[++(*PC)];
+                    *PC = new_pc - 1;
                 } else (*PC)++;
 
                 #ifdef DUMP

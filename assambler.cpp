@@ -65,7 +65,7 @@ int main()
     assert(command_lines != 0);
     get_lines(command_lines, command_text);
 
-    int* command_codes = (int*) calloc(linenum * 2 + 1 /*password*/ + 1 /*version*/, sizeof(int));
+    int* command_codes = (int*) calloc(linenum * 2 + 1 /*SIGNATURE*/ + 1 /*version*/, sizeof(int));
     assert(command_codes != NULL);
 
     create_signature(command_codes);
@@ -97,7 +97,7 @@ int main()
 
 void create_signature(int* code)
 {
-    memcpy(code, PASSWORD, 4);
+    memcpy(code, SIGNATURE, 4);
     code[1] = VERSION;
 }
 

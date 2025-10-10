@@ -1,5 +1,5 @@
 const int VERSION = 9;
-const char PASSWORD[4] = "SVU";
+const char SIGNATURE[4] = "SVU";
 
 typedef enum
 {
