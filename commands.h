@@ -1,7 +1,7 @@
 #ifndef COMMANDS
 #define COMMANDS
 
-const int VERSION = 10;
+const int VERSION = 12;
 const char SIGNATURE[4] = "SVU";
 
 typedef enum
@@ -9,28 +9,32 @@ typedef enum
     HELP            = 0,
     PUSH            = 1,      //=============================================//
     ADD             = 2,      //                                             //
-    SUB             = 3,      //         IF YOU CHANGE THE COMMANDS.H        //
-    DIV             = 4,      //                                             //
-    OUT             = 5,      //                 YOU MUST                    //
-    MUL             = 6,      //                                             //
-    POW             = 7,      //            CHANGE THE VERSION               //
-    SQRT            = 8,      //                                             //
-    RESET_STK       = 9,      //=============================================//
-    PUSHREG         = 10,
-    POPREG          = 11,
-    JMP             = 12,
-    JB              = 13, // <
-    JBE             = 14, // <=
-    JA              = 15, // >
-    JAE             = 16, // >=
-    JE              = 17, // ==
-    JNE             = 18, // !=
-    CALL            = 19,
-    RET             = 20,
-    IN              = 21,
-    START           = 22,
-    INVALID_COMMAND = 23,
-    HLT             = 24
+    MOD             = 3,      //                                             //
+    SUB             = 4,      //         IF YOU CHANGE THE COMMANDS.H        //
+    DIV             = 5,      //                                             //
+    OUT             = 6,      //                 YOU MUST                    //
+    MUL             = 7,      //                                             //
+    POW             = 8,      //            CHANGE THE VERSION               //
+    SQRT            = 9,      //                                             //
+    RESET_STK       = 10,      //=============================================//
+    PUSHREG         = 11,
+    POPREG          = 12,
+    JMP             = 13,
+    JB              = 14, // <
+    JBE             = 15, // <=
+    JA              = 16, // >
+    JAE             = 17, // >=
+    JE              = 18, // ==
+    JNE             = 19, // !=
+    CALL            = 20,
+    RET             = 21,
+    IN              = 22,
+    PUSHM           = 23,
+    POPM            = 24,
+    DRAW            = 25,
+    START           = 26,
+    INVALID_COMMAND = 27,
+    HLT             = 28
 } command_t;
 
 typedef enum

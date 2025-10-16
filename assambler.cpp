@@ -14,17 +14,18 @@
 const int MAX_COMMAND_LENGTH = 20;
 const int MAX_REG_LENGTH = 8;
 const int MAX_LABELS_NUM = 10;
-const char* FILE_NAME = /*"factorial.asm";*/  "NotLineSquareSolver.asm";   /*"example2.asm";*/
-const char* CREATE_FILE = /*"factorial.bin";*/  "NotLineSquareSolver.bin";   /*"example2.bin";*/      //todo: read about strcat
+const char* FILE_NAME = "Work_With_RAM.asm";  /*"factorial.asm";*/  /*"NotLineSquareSolver.asm";*/   /*"example2.asm";*/
+const char* CREATE_FILE = "Work_With_RAM.bin";  /*"factorial.bin";*/  /*"NotLineSquareSolver.bin";*/   /*"example2.bin";*/      //todo: read about strcat
 
 typedef enum
 {
-    ASSEMBLER_OK  = 1 << 1,
-    NOTFOUND_REG  = 1 << 2,
-    NOTFOUND_ARG  = 1 << 3,
-    INCORRECT_REG = 1 << 4,
-    FIND_REG_ERR  = 1 << 5,
-    FIND_ARG_ERR  = 1 << 6,
+    ASSEMBLER_OK   = 1 << 1,
+    NOTFOUND_REG   = 1 << 2,
+    NOTFOUND_ARG   = 1 << 3,
+    INCORRECT_REG  = 1 << 4,
+    FIND_REG_ERR   = 1 << 5,
+    FIND_ARG_ERR   = 1 << 6,
+    FIND_MEM_I_ERR = 1 << 7
 } AssemblerErr_t;
 
 struct translator_s
@@ -44,6 +45,7 @@ void translate_command(translator_s* translator);
 void do_help(void);
 AssemblerErr_t find_reg(translator_s* translator);
 AssemblerErr_t find_arg(translator_s* translator);
+AssemblerErr_t find_mem_i(translator_s* translator);
 void print_result_code(translator_s* translator);
 int write_result_in_text_file(translator_s* translator);
 //todo: struct hadder{signature, version, PC};
@@ -272,6 +274,13 @@ AssemblerErr_t find_and_translate_all_commands(translator_s* translator)
 
             codes[(*count)++] = SUB;
         }
+        else if (strcmp(command,"MOD") == 0) {
+            #ifdef DUMP
+                printf("%3d %s  ", *count, command); getchar();
+            #endif
+
+            codes[(*count)++] = MOD;
+        }
         else if (strcmp(command,"DIV") == 0) {
             #ifdef DUMP
                 printf("%3d %s  ", *count, command); getchar();
@@ -299,6 +308,29 @@ AssemblerErr_t find_and_translate_all_commands(translator_s* translator)
             #endif
 
             codes[(*count)++] = SQRT;
+        }
+        else if (strcmp(command,"PUSHM") == 0) {
+            #ifdef DUMP
+                printf("%3d %s  ", *count, command);
+            #endif
+
+            codes[(*count)++] = PUSHM;
+            if(find_reg(translator) != ASSEMBLER_OK) return FIND_REG_ERR;
+        }
+        else if (strcmp(command,"POPM") == 0) {
+            #ifdef DUMP
+                printf("%3d %s  ", *count, command);
+            #endif
+
+            codes[(*count)++] = POPM;
+            if(find_reg(translator) != ASSEMBLER_OK) return FIND_REG_ERR;
+        }
+        else if (strcmp(command,"DRAW") == 0) {
+            #ifdef DUMP
+                printf("%3d %s  ", *count, command); getchar();
+            #endif
+
+            codes[(*count)++] = DRAW;
         }
         else if (strcmp(command,"HLT") == 0) {
             #ifdef DUMP
@@ -335,52 +367,60 @@ AssemblerErr_t find_reg(translator_s* translator)
 {
     assert(translator != NULL);
 
+    #ifdef DUMP
+        const int REG = 0;
+        const int MEM_I = 1;
+        int MODE = REG;
+    #endif
+
     char reg[MAX_REG_LENGTH] = {};
-    if (sscanf(translator->lines[translator->count_line].ptr,"%*s %s", reg) != 1) {
-        printf(CHANGE_ON RED TEXT_COLOR "Missing reg for a function that must have an reg\n" RESET);
-        do_help();
-        return NOTFOUND_REG;
+    if (sscanf(translator->lines[translator->count_line].ptr, "%*s [%[^]]", reg) != 1) {
+        if (sscanf(translator->lines[translator->count_line].ptr,"%*s %s", reg) != 1) {
+            printf(CHANGE_ON RED TEXT_COLOR "Missing reg for a function that must have an reg\n" RESET);
+            do_help();
+            return NOTFOUND_REG;
+        }
+    } else {
+        #ifdef DUMP
+            printf("[");
+            MODE = MEM_I
+        #endif
+        ;
     }
 
     if(strcmp(reg, "AX") == 0) {
         #ifdef DUMP
-            printf("reg %s", reg);
-            getchar();
+            printf("%s", reg);
         #endif
         translator->codes[translator->code_num++] = AX;
     }
     else if(strcmp(reg, "BX") == 0) {
         #ifdef DUMP
-            printf("reg %s", reg);
-            getchar();
+            printf("%s", reg);
         #endif
         translator->codes[translator->code_num++] = BX;
     }
     else if(strcmp(reg, "CX") == 0) {
         #ifdef DUMP
-            printf("reg %s", reg);
-            getchar();
+            printf("%s", reg);
         #endif
         translator->codes[translator->code_num++] = CX;
     }
     else if(strcmp(reg, "DX") == 0) {
         #ifdef DUMP
-            printf("reg %s", reg);
-            getchar();
+            printf("%s", reg);
         #endif
         translator->codes[translator->code_num++] = DX;
     }
     else if(strcmp(reg, "SX") == 0) {
         #ifdef DUMP
-            printf("reg %s", reg);
-            getchar();
+            printf("%s", reg);
         #endif
         translator->codes[translator->code_num++] = SX;
     }
     else if(strcmp(reg, "RX") == 0) {
         #ifdef DUMP
-            printf("reg %s", reg);
-            getchar();
+            printf("%s", reg);
         #endif
         translator->codes[translator->code_num++] = RX;
     }
@@ -389,6 +429,11 @@ AssemblerErr_t find_reg(translator_s* translator)
         do_help();
         return INCORRECT_REG;
     }
+    #ifdef DUMP
+        if (MODE == MEM_I) printf("]");
+        getchar();
+    #endif
+
     return ASSEMBLER_OK;
 }
 

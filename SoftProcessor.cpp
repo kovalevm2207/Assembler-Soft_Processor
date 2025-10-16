@@ -10,7 +10,7 @@
 
 const size_t CAPACITY = 20;
 const size_t MAX_LABELS_NUM = 20;
-const char* FILE_NAME = /*"factorial.bin";*/"NotLineSquareSolver.bin";/*"example2.bin";*/
+const char* FILE_NAME = "Work_With_RAM.bin";/*"factorial.bin";*/  /*"NotLineSquareSolver.bin";*/  /*"example2.bin";*/
 
 typedef enum
 {
@@ -30,9 +30,10 @@ typedef struct SPU
     int regs[5];
     size_t file_size;
     stack_s labels;
+    int* RAM;
 } SPU;
 
-ProcessorErr_t ProcessorCtor(SPU* spu, int* code);
+ProcessorErr_t ProcessorCtor(SPU* spu, int* code, int* RAM);
 ProcessorErr_t check_heder(int* code);
 ProcessorErr_t ProcessorExe(SPU* spu);
 ProcessorErr_t ProcessorDtor(SPU* spu);
@@ -58,8 +59,14 @@ int main()
         return 1;
     }
 
-    if (ProcessorCtor(&spu, code) != PROCESSOR_OK) {
-        printf(CHANGE_ON RED TEXT_COLOR "ERROR! PROCESSORCTOR FAILED\n" RESET);
+    int* RAM = (int*) calloc(4141, sizeof(int));
+    assert(RAM != NULL);
+
+    int STATUS = ProcessorCtor(&spu, code, RAM);
+    if(STATUS != PROCESSOR_OK) {
+        printf(CHANGE_ON RED TEXT_COLOR "ERROR! PROCESSOR_CTOR FAILED; STATUS = %d\n", STATUS);
+        if (STATUS & BAD_VERSION) printf("BAD_VERSION(%d)\n", BAD_VERSION);
+        if (STATUS & BAD_SIGNATURE) printf("BAD_SIGNATURE(%d)\n" RESET, BAD_SIGNATURE);
         ProcessorDtor(&spu);
         return 1;
     }
@@ -74,10 +81,11 @@ int main()
 }
 
 
-ProcessorErr_t ProcessorCtor(SPU* spu, int* code)
+ProcessorErr_t ProcessorCtor(SPU* spu, int* code, int* RAM)
 {
     assert(spu != NULL);
     assert(code != NULL);
+    assert(RAM != NULL);
 
     int STATUS = PROCESSOR_OK;
     STATUS |= check_heder(code);
@@ -92,6 +100,7 @@ ProcessorErr_t ProcessorCtor(SPU* spu, int* code)
     spu->PC = 2;
     spu->stk = stk;
     spu->labels = labels;
+    spu->RAM = RAM;
     for (int i = 0; i < 4; i++) {
         spu->regs[i] = 0;
     }
@@ -106,7 +115,7 @@ ProcessorErr_t check_heder(int* code)
     assert(code != NULL);
 
     int sign_err = PROCESSOR_OK;
-
+    printf("VERSION = %d    code[1] = %d\n", VERSION, code[1]);
     if (code[1] != VERSION)              sign_err |= BAD_VERSION;
     for(int i = 0; i < 4; i++) {
         if (*((char*)code + i) != SIGNATURE[i]) {
@@ -128,6 +137,7 @@ ProcessorErr_t ProcessorDtor(SPU* spu)
         spu->regs[i] = 0;
     }
     free(spu->code);
+    free(spu->RAM);
 
     return PROCESSOR_OK;
 }
@@ -176,6 +186,7 @@ ProcessorErr_t ProcessorExe(SPU* spu)
     stack_s* stk = &spu->stk;
     stack_s* labels = &spu->labels;
     int* regs = spu->regs;
+    int* RAM = spu->RAM;
 
     while (code[*PC] != EOF) {
         switch(code[*PC]) {
@@ -210,6 +221,20 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 StackPop(stk, &b);
 
                 stack_t c = b - a;
+                StackPush(stk, c);
+
+                #ifdef DUMP
+                    ProcessorDump(spu);
+                    getchar();
+                #endif
+                break;
+            }
+            case MOD: {
+                stack_t a = 0, b = 0;
+                StackPop(stk, &a);
+                StackPop(stk, &b);
+
+                stack_t c = b % a;
                 StackPush(stk, c);
 
                 #ifdef DUMP
@@ -328,7 +353,7 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 break;
             }
             case RET: {
-                int new_pc = 0;
+                stack_t new_pc = 0;
                 StackPop(labels, &new_pc);
                 *PC = new_pc + 1;
 
@@ -349,7 +374,7 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 break;
             }
             case JB: {
-                int a = 0, b = 0;
+                stack_t a = 0, b = 0;
                 StackPop(stk, &b);
                 StackPop(stk, &a);
 
@@ -365,7 +390,7 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 break;
             }
             case JBE: {
-                int a = 0, b = 0;
+                stack_t a = 0, b = 0;
                 StackPop(stk, &b);
                 StackPop(stk, &a);
 
@@ -381,7 +406,7 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 break;
             }
             case JA: {
-                int a = 0, b = 0;
+                stack_t a = 0, b = 0;
                 StackPop(stk, &b);
                 StackPop(stk, &a);
 
@@ -397,7 +422,7 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 break;
             }
             case JAE: {
-                int a = 0, b = 0;
+                stack_t a = 0, b = 0;
                 StackPop(stk, &b);
                 StackPop(stk, &a);
 
@@ -413,7 +438,7 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 break;
             }
             case JE: {
-                int a = 0, b = 0;
+                stack_t a = 0, b = 0;
                 StackPop(stk, &b);
                 StackPop(stk, &a);
 
@@ -429,7 +454,7 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 break;
             }
             case JNE: {
-                int a = 0, b = 0;
+                stack_t a = 0, b = 0;
                 StackPop(stk, &b);
                 StackPop(stk, &a);
 
@@ -455,6 +480,38 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                     ProcessorDump(spu);
                     getchar();
                 #endif
+                break;
+            }
+            case POPM: {
+                stack_t data = 0;
+                StackPop(stk, &data);
+                int mem_i = regs[code[++(*PC)]];
+                RAM[mem_i] = data;
+
+                #ifdef DUMP
+                    ProcessorDump(spu);
+                    getchar();
+                #endif
+                break;
+            }
+            case PUSHM: {
+                int mem_i = code[++(*PC)];
+                StackPush(stk, RAM[mem_i]);
+
+                #ifdef DUMP
+                    ProcessorDump(spu);
+                    getchar();
+                #endif
+                break;
+            }
+            case DRAW: {
+                for (int i = 0; i < 4141; i++) {
+                    if (RAM[i] == 0) printf(".");
+                    else printf ("%c", RAM[i]);
+                    if ((i + 1) % 101 == 0) printf ("\n");
+                }
+                printf("\n");
+
                 break;
             }
             case HLT:
