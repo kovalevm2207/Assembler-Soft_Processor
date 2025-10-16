@@ -174,99 +174,79 @@ AssemblerErr_t find_and_translate_all_commands(translator_s* translator)
             codes[(*count)++] = RET;
         }
         else if (strcmp(command,"JMP") == 0) {
-            #ifdef DUMP
-                printf("%3d %s  ", *count, command); getchar();
-            #endif
-
             codes[(*count)++] = JMP;
 
             int label = 0;
             sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
+            codes[(*count)++] = labels[label];
+
             #ifdef DUMP
+                printf("%3d %s  ", *count, command); getchar();
                 printf(":%d or JMP %d", label, labels[label]); getchar();
             #endif
-            codes[(*count)++] = labels[label];
         }
         else if (strcmp(command,"JB") == 0) {
-            #ifdef DUMP
-                printf("%3d %s  ", *count, command);
-            #endif
-
             codes[(*count)++] = JB;
 
             int label = 0;
             sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
             #ifdef DUMP
+                printf("%3d %s  ", *count, command);
                 printf(":%d or JB %d", label, labels[label]); getchar();
             #endif
             codes[(*count)++] = labels[label];
         }
         else if (strcmp(command,"JBE") == 0) {
-            #ifdef DUMP
-                printf("%3d %s  ", *count, command);
-            #endif
-
             codes[(*count)++] = JBE;
 
             int label = 0;
             sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
             #ifdef DUMP
+                printf("%3d %s  ", *count, command);
                 printf(":%d or JBE %d", label, labels[label]); getchar();
             #endif
             codes[(*count)++] = labels[label];
         }
         else if (strcmp(command,"JA") == 0) {
-            #ifdef DUMP
-                printf("%3d %s  ", *count, command);
-            #endif
-
             codes[(*count)++] = JA;
 
             int label = 0;
             sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
             #ifdef DUMP
+                printf("%3d %s  ", *count, command);
                 printf(":%d or JA %d", label, labels[label]); getchar();
             #endif
             codes[(*count)++] = labels[label];
         }
         else if (strcmp(command,"JAE") == 0) {
-            #ifdef DUMP
-                printf("%3d %s  ", *count, command);
-            #endif
-
             codes[(*count)++] = JAE;
 
             int label = 0;
             sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
             #ifdef DUMP
+                printf("%3d %s  ", *count, command);
                 printf(":%d or JAE %d", label, labels[label]); getchar();
             #endif
             codes[(*count)++] = labels[label];
         }
         else if (strcmp(command,"JE") == 0) {
-            #ifdef DUMP
-                printf("%3d %s  ", *count, command);
-            #endif
-
             codes[(*count)++] = JE;
 
             int label = 0;
             sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
             #ifdef DUMP
+                printf("%3d %s  ", *count, command);
                 printf(":%d or JE %d", label, labels[label]); getchar();
             #endif
             codes[(*count)++] = labels[label];
         }
         else if (strcmp(command,"JNE") == 0) {
-            #ifdef DUMP
-                printf("%3d %s  ", *count, command);
-            #endif
-
             codes[(*count)++] = JNE;
 
             int label = 0;
             sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
             #ifdef DUMP
+                printf("%3d %s  ", *count, command);
                 printf(":%d or JNE %d", label, labels[label]); getchar();
             #endif
             codes[(*count)++] = labels[label];
