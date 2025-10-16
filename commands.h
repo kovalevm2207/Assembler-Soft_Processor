@@ -1,7 +1,7 @@
 #ifndef COMMANDS
 #define COMMANDS
 
-const int VERSION = 9;
+const int VERSION = 10;
 const char SIGNATURE[4] = "SVU";
 
 typedef enum
@@ -25,10 +25,12 @@ typedef enum
     JAE             = 16, // >=
     JE              = 17, // ==
     JNE             = 18, // !=
-    IN              = 19,
-    START           = 20,
-    INVALID_COMMAND = 21,
-    HLT             = 22
+    CALL            = 19,
+    RET             = 20,
+    IN              = 21,
+    START           = 22,
+    INVALID_COMMAND = 23,
+    HLT             = 24
 } command_t;
 
 typedef enum
@@ -37,7 +39,8 @@ typedef enum
     BX = 1,
     CX = 2,
     DX = 3,
-    SX = 4
+    SX = 4,
+    RX = 5
 } reg_t;
 
 #endif // COMMANDS

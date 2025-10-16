@@ -9,7 +9,8 @@
 #include "ReadFile.h"
 
 const size_t CAPACITY = 20;
-const char* FILE_NAME = "NotLineSquareSolver.bin";//"example2.bin";
+const size_t MAX_LABELS_NUM = 20;
+const char* FILE_NAME = /*"factorial.bin";*/"NotLineSquareSolver.bin";/*"example2.bin";*/
 
 typedef enum
 {
@@ -28,6 +29,7 @@ typedef struct SPU
     stack_s stk;
     int regs[5];
     size_t file_size;
+    stack_s labels;
 } SPU;
 
 ProcessorErr_t ProcessorCtor(SPU* spu, int* code);
@@ -40,7 +42,7 @@ int main()
 {
     SPU spu = {};
 
-    FILE* file = fopen(FILE_NAME, "rb"); // fopen возвращает файловый дискриптор
+    FILE* file = fopen(FILE_NAME, "rb");
     assert(file != NULL);
 
     if (fread(&(spu.file_size), sizeof(size_t), 1, file) != 1) {
@@ -83,9 +85,13 @@ ProcessorErr_t ProcessorCtor(SPU* spu, int* code)
     stack_s stk = {};
     STATUS |= StackCtor(&stk, CAPACITY);
 
+    stack_s labels = {};
+    STATUS |= StackCtor(&labels, MAX_LABELS_NUM);
+
     spu->code = code;
     spu->PC = 2;
     spu->stk = stk;
+    spu->labels = labels;
     for (int i = 0; i < 4; i++) {
         spu->regs[i] = 0;
     }
@@ -116,6 +122,7 @@ ProcessorErr_t ProcessorDtor(SPU* spu)
     assert(spu != NULL);
 
     StackDtor(&spu->stk);
+    StackDtor(&spu->labels);
     spu->PC = 0;
     for (int i = 0; i < 4; i++) {
         spu->regs[i] = 0;
@@ -167,6 +174,7 @@ ProcessorErr_t ProcessorExe(SPU* spu)
     int* code = spu->code;
     size_t* PC = &spu->PC;
     stack_s* stk = &spu->stk;
+    stack_s* labels = &spu->labels;
     int* regs = spu->regs;
 
     while (code[*PC] != EOF) {
@@ -301,6 +309,28 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 reg_t reg = (reg_t) code[++(*PC)];
 
                 StackPop(stk, &regs[reg]);
+
+                #ifdef DUMP
+                    ProcessorDump(spu);
+                    getchar();
+                #endif
+                break;
+            }
+            case CALL: {
+                StackPush(labels, *PC);
+                int new_pc = code[++(*PC)];
+                *PC = new_pc - 1;
+
+                #ifdef DUMP
+                    ProcessorDump(spu);
+                    getchar();
+                #endif
+                break;
+            }
+            case RET: {
+                int new_pc = 0;
+                StackPop(labels, &new_pc);
+                *PC = new_pc + 1;
 
                 #ifdef DUMP
                     ProcessorDump(spu);

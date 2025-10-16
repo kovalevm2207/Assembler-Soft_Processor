@@ -9,31 +9,36 @@
 #include "commands.h"
 #include "color_print.h"
 #include "ReadFile.h"
+#include "my_stack.h"
 
 const int MAX_COMMAND_LENGTH = 20;
 const int MAX_REG_LENGTH = 8;
-const char* FILE_NAME = "NotLineSquareSolver.asm";//"example2.asm";
-const char* CREATE_FILE = "NotLineSquareSolver.bin";//"example2.bin";      // todo: read about strcat
+const int MAX_LABELS_NUM = 10;
+const char* FILE_NAME = /*"factorial.asm";*/  "NotLineSquareSolver.asm";   /*"example2.asm";*/
+const char* CREATE_FILE = /*"factorial.bin";*/  "NotLineSquareSolver.bin";   /*"example2.bin";*/      //todo: read about strcat
 
 typedef enum
 {
-    ASSEMBLER_OK = 1 << 1,
-    NOTFOUND_REG = 1 << 2,
-    NOTFOUND_ARG = 1 << 3
+    ASSEMBLER_OK  = 1 << 1,
+    NOTFOUND_REG  = 1 << 2,
+    NOTFOUND_ARG  = 1 << 3,
+    INCORRECT_REG = 1 << 4,
+    FIND_REG_ERR  = 1 << 5,
+    FIND_ARG_ERR  = 1 << 6,
 } AssemblerErr_t;
 
 struct translator_s
 {
     size_t linenum;
     size_t count_line;
-    size_t code_num;
+    int code_num;
     line* lines;
-    command_t command;
     int* codes;
+    int* labels;
 };
 
 
-command_t find_and_translate_all_commands(translator_s* translator);
+AssemblerErr_t find_and_translate_all_commands(translator_s* translator);
 void create_signature(int* code);
 void translate_command(translator_s* translator);
 void do_help(void);
@@ -68,22 +73,25 @@ int main()
     int* command_codes = (int*) calloc(linenum * 2 + 1 /*SIGNATURE*/ + 1 /*version*/, sizeof(int));
     assert(command_codes != NULL);
 
+
     create_signature(command_codes);
+
+    int labels[MAX_LABELS_NUM] = {};
 
     translator_s translator = {
         .linenum = linenum,
         .count_line = 0,
         .code_num = 2,
         .lines = command_lines,
-        .command = START,
-        .codes = command_codes
+        .codes = command_codes,
+        .labels = labels,
     };
 
-    if (find_and_translate_all_commands(&translator) == INVALID_COMMAND) {
-        printf(CHANGE_ON RED TEXT_COLOR "INVALID_COMMAND, please read help:\n" RESET);
-        do_help();
-        return 1;
-    }
+
+    find_and_translate_all_commands(&translator);
+    translator.count_line = 0;
+    translator.code_num = 2;
+    find_and_translate_all_commands(&translator);
 
     write_result_in_text_file(&translator);
 
@@ -102,255 +110,244 @@ void create_signature(int* code)
 }
 
 
-command_t find_and_translate_all_commands(translator_s* translator)
+AssemblerErr_t find_and_translate_all_commands(translator_s* translator)
 {
     assert(translator != NULL);
 
     char command[MAX_COMMAND_LENGTH] = {};
 
-    for (; translator->count_line < translator->linenum; translator->count_line++) {
-        sscanf(translator->lines[translator->count_line].ptr, "%s", command);
+    int* labels = translator->labels;
+    int* count = &(translator->code_num);
+    int* codes = translator->codes;
 
+    for (; translator->count_line < translator->linenum; translator->count_line++) {
+
+        sscanf(translator->lines[translator->count_line].ptr, "%s", command);
         if (strcmp(command,"PUSH") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command);
+                printf("%3d %s  ", *count, command);
             #endif
 
-            translator->command = PUSH;
+            codes[(*count)++] = PUSH;
+            if (find_arg(translator) != ASSEMBLER_OK) return FIND_ARG_ERR;
         }
         else if (strcmp(command,"POW") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command);
+                printf("%3d %s  ", *count, command);
             #endif
 
-            translator->command = POW;
+            codes[(*count)++] = POW;
+            if (find_arg(translator) != ASSEMBLER_OK) return FIND_ARG_ERR;
         }
         else if (strcmp(command,"PUSHREG") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command);
+                printf("%3d %s  ", *count, command);
             #endif
 
-            translator->command = PUSHREG;
+            codes[(*count)++] = PUSHREG;
+            if (find_reg(translator) != ASSEMBLER_OK) return FIND_REG_ERR;
         }
         else if (strcmp(command,"POPREG") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command);
+                printf("%3d %s  ", *count, command);
             #endif
 
-            translator->command = POPREG;
+            codes[(*count)++] = POPREG;
+            if (find_reg(translator) != ASSEMBLER_OK) return FIND_REG_ERR;
+        }
+        else if (strcmp(command,"CALL") == 0) {
+            #ifdef DUMP
+                printf("%3d %s  ", *count, command); getchar();
+            #endif
+
+            codes[(*count)++] = CALL;
+
+            int label = 0;
+            sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
+            codes[(*count)++] = labels[label];
+        }
+        else if (strcmp(command,"RET") == 0) {
+            #ifdef DUMP
+                printf("%3d %s  ", *count, command);
+            #endif
+
+            codes[(*count)++] = RET;
         }
         else if (strcmp(command,"JMP") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command);
+                printf("%3d %s  ", *count, command); getchar();
             #endif
 
-            translator->command = JMP;
+            codes[(*count)++] = JMP;
+
+            int label = 0;
+            sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
+            #ifdef DUMP
+                printf(":%d or JMP %d", label, labels[label]); getchar();
+            #endif
+            codes[(*count)++] = labels[label];
         }
         else if (strcmp(command,"JB") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command);
+                printf("%3d %s  ", *count, command);
             #endif
 
-            translator->command =  JB;
+            codes[(*count)++] = JB;
+
+            int label = 0;
+            sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
+            #ifdef DUMP
+                printf(":%d or JB %d", label, labels[label]); getchar();
+            #endif
+            codes[(*count)++] = labels[label];
         }
         else if (strcmp(command,"JBE") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command);
+                printf("%3d %s  ", *count, command);
             #endif
 
-            translator->command = JBE;
+            codes[(*count)++] = JBE;
+
+            int label = 0;
+            sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
+            #ifdef DUMP
+                printf(":%d or JBE %d", label, labels[label]); getchar();
+            #endif
+            codes[(*count)++] = labels[label];
         }
         else if (strcmp(command,"JA") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command);
+                printf("%3d %s  ", *count, command);
             #endif
 
-            translator->command =  JA;
+            codes[(*count)++] = JA;
+
+            int label = 0;
+            sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
+            #ifdef DUMP
+                printf(":%d or JA %d", label, labels[label]); getchar();
+            #endif
+            codes[(*count)++] = labels[label];
         }
         else if (strcmp(command,"JAE") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command);
+                printf("%3d %s  ", *count, command);
             #endif
 
-            translator->command = JAE;
+            codes[(*count)++] = JAE;
+
+            int label = 0;
+            sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
+            #ifdef DUMP
+                printf(":%d or JAE %d", label, labels[label]); getchar();
+            #endif
+            codes[(*count)++] = labels[label];
         }
         else if (strcmp(command,"JE") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command);
+                printf("%3d %s  ", *count, command);
             #endif
 
-            translator->command =  JE;
+            codes[(*count)++] = JE;
+
+            int label = 0;
+            sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
+            #ifdef DUMP
+                printf(":%d or JE %d", label, labels[label]); getchar();
+            #endif
+            codes[(*count)++] = labels[label];
         }
         else if (strcmp(command,"JNE") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command);
+                printf("%3d %s  ", *count, command);
             #endif
 
-            translator->command = JNE;
+            codes[(*count)++] = JNE;
+
+            int label = 0;
+            sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
+            #ifdef DUMP
+                printf(":%d or JNE %d", label, labels[label]); getchar();
+            #endif
+            codes[(*count)++] = labels[label];
         }
         else if (strcmp(command,"IN") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command); getchar();
+                printf("%3d %s  ", *count, command); getchar();
             #endif
 
-            translator->command =  IN;
+            codes[(*count)++] = IN;
         }
         else if (strcmp(command,"ADD") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command); getchar();
+                printf("%3d %s  ", *count, command); getchar();
             #endif
 
-            translator->command = ADD;
+            codes[(*count)++] = ADD;
         }
         else if (strcmp(command,"SUB") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command); getchar();
+                printf("%3d %s  ", *count, command); getchar();
             #endif
 
-            translator->command = SUB;
+            codes[(*count)++] = SUB;
         }
         else if (strcmp(command,"DIV") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command); getchar();
+                printf("%3d %s  ", *count, command); getchar();
             #endif
 
-            translator->command = DIV;
+            codes[(*count)++] = DIV;
         }
         else if (strcmp(command,"OUT") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command); getchar();
+                printf("%3d %s  ", *count, command); getchar();
             #endif
 
-            translator->command = OUT;
+            codes[(*count)++] = OUT;
         }
         else if (strcmp(command,"MUL") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command); getchar();
+                printf("%3d %s  ", *count, command); getchar();
             #endif
 
-            translator->command = MUL;
+            codes[(*count)++] = MUL;
         }
         else if (strcmp(command,"SQRT") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command); getchar();
+                printf("%3d %s  ", *count, command); getchar();
             #endif
 
-            translator->command = SQRT;
+            codes[(*count)++] = SQRT;
         }
         else if (strcmp(command,"HLT") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command); getchar();
+                printf("%3d %s  ", *count, command); getchar();
             #endif
 
-            translator->command = HLT;
+            codes[(*count)++] = HLT;
         }
         else if (strcmp(command,"RESET") == 0) {
             #ifdef DUMP
-                printf("%3zu %s  ", translator->code_num, command); getchar();
+                printf("%3d %s  ", *count, command); getchar();
             #endif
 
-            translator->command = RESET_STK;
+            codes[(*count)++] = RESET_STK;
         }
-        else return INVALID_COMMAND;
-
-        translate_command(translator);
-
+        else {
+            int label = 0;
+            if (sscanf(translator->lines[translator->count_line].ptr, " :%d", &label) == 1) {
+                labels[label] = *count;
+                #ifdef DUMP
+                    printf(":%d or count = %d\n", label, *count);
+                #endif
+            }
+            else return (AssemblerErr_t) INVALID_COMMAND;
+        }
         memset(command, 0, sizeof(command));
     }
 
-    return translator->command;
-}
-
-
-void translate_command(translator_s* translator)
-{
-    assert(translator != NULL);
-
-    int* codes = translator->codes;
-    command_t command = translator->command;
-    size_t* count = &(translator->code_num);
-
-    switch (command) {
-        case HLT:
-                codes[(*count)++] = HLT;
-                break;
-        case HELP:
-                do_help();
-                break;
-        case PUSH:
-                codes[(*count)++] = PUSH;
-                find_arg(translator);
-                break;
-        case ADD:
-                codes[(*count)++] = ADD;
-                break;
-        case SUB:
-                codes[(*count)++] = SUB;
-                break;
-        case DIV:
-                codes[(*count)++] = DIV;
-                break;
-        case OUT:
-                codes[(*count)++] = OUT;
-                break;
-        case MUL:
-                codes[(*count)++] = MUL;
-                break;
-        case POW:
-                codes[(*count)++] = POW;
-                find_arg(translator);
-                break;
-        case SQRT:
-                codes[(*count)++] = SQRT;
-                break;
-        case RESET_STK:
-                codes[(*count)++] = RESET_STK;
-                break;
-        case PUSHREG:
-                codes[(*count)++] = PUSHREG;
-                find_reg(translator);
-                break;
-        case POPREG:
-                codes[(*count)++] = POPREG;
-                find_reg(translator);
-                break;
-        case JMP:
-                codes[(*count)++] = JMP;
-                find_arg(translator);
-                break;
-        case  JB:
-                codes[(*count)++] = JB;
-                find_arg(translator);
-                break;
-        case JBE:
-                codes[(*count)++] = JBE;
-                find_arg(translator);
-                break;
-        case  JA:
-                codes[(*count)++] = JA;
-                find_arg(translator);
-                break;
-        case JAE:
-                codes[(*count)++] = JAE;
-                find_arg(translator);
-                break;
-        case  JE:
-                codes[(*count)++] = JE;
-                find_arg(translator);
-                break;
-        case JNE:
-                codes[(*count)++] = JNE;
-                find_arg(translator);
-                break;
-        case IN:
-                codes[(*count)++] = IN;
-                break;
-        case START:
-        case INVALID_COMMAND:
-                break;
-        default:
-            break;
-    }
+    return ASSEMBLER_OK;
 }
 
 
@@ -400,10 +397,17 @@ AssemblerErr_t find_reg(translator_s* translator)
         #endif
         translator->codes[translator->code_num++] = SX;
     }
+    else if(strcmp(reg, "RX") == 0) {
+        #ifdef DUMP
+            printf("reg %s", reg);
+            getchar();
+        #endif
+        translator->codes[translator->code_num++] = RX;
+    }
     else {
         printf(CHANGE_ON RED TEXT_COLOR "Invalid reg\n" RESET);
         do_help();
-        return NOTFOUND_REG;
+        return INCORRECT_REG;
     }
     return ASSEMBLER_OK;
 }
@@ -438,7 +442,7 @@ int write_result_in_text_file(translator_s* translator)
 
     FILE* file = fopen(CREATE_FILE, "wb");
 
-    size_t code_size = translator->code_num * sizeof(int);
+    size_t code_size = (size_t) translator->code_num * sizeof(int);
 
     fwrite(&code_size, sizeof(size_t), 1, file);
     fwrite(translator->codes, sizeof(int), translator->code_num, file);
@@ -451,7 +455,7 @@ int write_result_in_text_file(translator_s* translator)
 void print_result_code(translator_s* translator)
 {
     printf("Result codes: ");
-        for (size_t i = 0; i < translator->code_num; i++) {
+        for (int i = 0; i < translator->code_num; i++) {
             printf("%d ", translator->codes[i]);
         }
         printf("\n");
