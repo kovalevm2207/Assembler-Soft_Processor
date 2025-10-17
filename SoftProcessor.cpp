@@ -8,10 +8,8 @@
 #include <cstring>
 
 #include "commands.h"
-#include "my_stack.h"
 #include "ReadFile.h"
 
-const size_t CAPACITY = 20;
 const size_t MAX_LABELS_NUM = 20;
 const char* FILE_NAME = "Work_With_RAM.bin";  /*"factorial.bin";*/  /*"NotLineSquareSolver.bin";*/  /*"example2.bin";*/
 
@@ -25,16 +23,6 @@ typedef enum
     BAD_VERSION          = 1 << 6
 } ProcessorErr_t;
 
-typedef struct SPU
-{
-    int* code;
-    size_t PC;
-    stack_s stk;
-    int regs[5];
-    size_t file_size;
-    stack_s labels;
-    int* RAM;
-} SPU;
 
 ProcessorErr_t ProcessorCtor(SPU* spu, int* code, int* RAM);
 ProcessorErr_t check_heder(int* code);
@@ -186,343 +174,36 @@ ProcessorErr_t ProcessorExe(SPU* spu)
 
     int* code = spu->code;
     size_t* PC = &spu->PC;
-    stack_s* stk = &spu->stk;
-    stack_s* labels = &spu->labels;
-    int* regs = spu->regs;
-    int* RAM = spu->RAM;
 
     while (code[*PC] != EOF) {
         switch(code[*PC]) {
-            case PUSH: {
-                stack_t data = code[++(*PC)];
-
-                StackPush(stk, data);
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case ADD: {
-                stack_t a = 0, b = 0;
-                StackPop(stk, &a);
-                StackPop(stk, &b);
-
-                stack_t c = a + b;
-                StackPush(stk, c);
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case SUB: {
-                stack_t a = 0, b = 0;
-                StackPop(stk, &a);
-                StackPop(stk, &b);
-
-                stack_t c = b - a;
-                StackPush(stk, c);
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case MOD: {
-                stack_t a = 0, b = 0;
-                StackPop(stk, &a);
-                StackPop(stk, &b);
-
-                stack_t c = b % a;
-                StackPush(stk, c);
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case DIV: {
-                stack_t a = 0, b = 0;
-                StackPop(stk, &a);
-                StackPop(stk, &b);
-
-                stack_t c = b / a;
-                StackPush(stk, c);
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case OUT: {
-                stack_t data = 0;
-                StackPop(stk, &data);
-
-                printf(CHANGE_ON BLUE TEXT_COLOR "answer = %10d\n" RESET, data);
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case MUL: {
-                stack_t a = 0, b = 0;
-                StackPop(stk, &a);
-                StackPop(stk, &b);
-
-                stack_t c = a * b;
-                StackPush(stk, c);
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case POW: {
-                stack_t a = 0, n = code[++(*PC)];
-                StackPop(stk, &a);
-
-                stack_t c = pow(a,n);
-                StackPush(stk, c);
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case SQRT: {
-                stack_t a = 0;
-                StackPop(stk, &a);
-
-                stack_t b = sqrt(a);
-                StackPush(stk, b);
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case RESET_STK: {
-                StackDtor(stk);
-                StackCtor(stk, CAPACITY);
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case PUSHREG: {
-                reg_t reg = (reg_t) code[++(*PC)];
-
-                StackPush(stk, regs[reg]);
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case POPREG: {
-                reg_t reg = (reg_t) code[++(*PC)];
-
-                StackPop(stk, &regs[reg]);
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case CALL: {
-                StackPush(labels, *PC);
-                int new_pc = code[++(*PC)];
-                *PC = new_pc - 1;
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case RET: {
-                stack_t new_pc = 0;
-                StackPop(labels, &new_pc);
-                *PC = new_pc + 1;
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case JMP: {
-                int new_pc = code[++(*PC)];
-                *PC = new_pc - 1;
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case JB: {
-                stack_t a = 0, b = 0;
-                StackPop(stk, &b);
-                StackPop(stk, &a);
-
-                if (a < b) {
-                    int new_pc = code[++(*PC)];
-                    *PC = new_pc - 1;
-                } else (*PC)++;
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case JBE: {
-                stack_t a = 0, b = 0;
-                StackPop(stk, &b);
-                StackPop(stk, &a);
-
-                if (a <= b) {
-                    int new_pc = code[++(*PC)];
-                    *PC = new_pc - 1;
-                } else (*PC)++;
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case JA: {
-                stack_t a = 0, b = 0;
-                StackPop(stk, &b);
-                StackPop(stk, &a);
-
-                if (a > b) {
-                    int new_pc = code[++(*PC)];
-                    *PC = new_pc - 1;
-                } else (*PC)++;
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case JAE: {
-                stack_t a = 0, b = 0;
-                StackPop(stk, &b);
-                StackPop(stk, &a);
-
-                if (a >= b) {
-                    int new_pc = code[++(*PC)];
-                    *PC = new_pc - 1;
-                } else (*PC)++;
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case JE: {
-                stack_t a = 0, b = 0;
-                StackPop(stk, &b);
-                StackPop(stk, &a);
-
-                if (a == b) {
-                    int new_pc = code[++(*PC)];
-                    *PC = new_pc - 1;
-                } else (*PC)++;
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case JNE: {
-                stack_t a = 0, b = 0;
-                StackPop(stk, &b);
-                StackPop(stk, &a);
-
-                if (a != b) {
-                    int new_pc = code[++(*PC)];
-                    *PC = new_pc - 1;
-                } else (*PC)++;
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case IN: {
-                int a = 0;
-                printf("Write integer: ");
-                scanf("%d", &a);
-
-                StackPush(stk, a);
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case POPM: {
-                stack_t data = 0;
-                StackPop(stk, &data);
-                int mem_i = regs[code[++(*PC)]];
-                RAM[mem_i] = data;
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case PUSHM: {
-                int mem_i = code[++(*PC)];
-                StackPush(stk, RAM[mem_i]);
-
-                #ifdef DUMP
-                    ProcessorDump(spu);
-                    getchar();
-                #endif
-                break;
-            }
-            case DRAW: {
-                system ("clear");
-                for (int i = 0; i < 4141; i++) {
-                    if (RAM[i] == 0) printf(".");
-                    else printf ("%c", RAM[i]);
-                    if ((i + 1) % 101 == 0) printf ("\n");
-                }
-                printf("\n");
-
-                break;
-            }
-            case HLT:
-                printf("You end the calc program\n");
-                return PROCESSOR_OK;
-            default:
-                return COMMAND_NOT_FOUND;
+            case RESET_STK: reset_stk(spu); break;
+            case PUSHREG:     pushreg(spu); break;
+            case SQRT:        my_sqrt(spu); break;
+            case POPREG:       popreg(spu); break;
+            case PUSHM:         pushm(spu); break;
+            case PUSH:           push(spu); break;
+            case CALL:           call(spu); break;
+            case POPM:           popm(spu); break;
+            case DRAW:           draw(spu); break;
+            case ADD:             add(spu); break;
+            case SUB:             sub(spu); break;
+            case MOD:             mod(spu); break;
+            case DIV:             div(spu); break;
+            case OUT:             out(spu); break;
+            case MUL:             mul(spu); break;
+            case POW:             pow(spu); break;
+            case RET:             ret(spu); break;
+            case JMP:             jmp(spu); break;
+            case JBE:             jbe(spu); break;
+            case JAE:             jae(spu); break;
+            case JNE:             jne(spu); break;
+            case JB:               jb(spu); break;
+            case JA:               ja(spu); break;
+            case JE:               je(spu); break;
+            case IN:               in(spu); break;
+            case HLT: hlt(); return PROCESSOR_OK;
+            default:         return COMMAND_NOT_FOUND;
         }
         (*PC)++;
     }

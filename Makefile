@@ -18,13 +18,13 @@ OBJECT_FILES = $(CPP_FILES:.cpp=.o)
 HEADER_FILES = $(wildcard *.h)
 
 # Исполняемые файлы
-all: soft_processor assembler
+all: soft_processor assambler
 
-soft_processor: SoftProcessor.o
-	@g++ $(DED_FLAGS) $(MODE) SoftProcessor.o -o soft_processor
+soft_processor: SoftProcessor.o commands.o my_stack.o
+	@g++ $(DED_FLAGS) $(MODE) commands.o SoftProcessor.o my_stack.o -o soft_processor
 
-assembler: assambler.o
-	@g++ $(DED_FLAGS) $(MODE) assambler.o -o assembler
+assambler: assambler.o
+	@g++ $(DED_FLAGS) $(MODE) assambler.o -o assambler
 
 # Объектные файлы
 assambler.o: assambler.cpp $(HEADER_FILES)
@@ -32,6 +32,12 @@ assambler.o: assambler.cpp $(HEADER_FILES)
 
 SoftProcessor.o: SoftProcessor.cpp $(HEADER_FILES)
 	@g++ $(DED_FLAGS) $(MODE) -c SoftProcessor.cpp -o SoftProcessor.o
+
+commands.o: commands.cpp $(HEADER_FILES)
+	@g++ $(DED_FLAGS) $(MODE) -c commands.cpp -o commands.o
+
+my_stack.o: my_stack.cpp $(HEADER_FILES)
+	@g++ $(DED_FLAGS) $(MODE) -c my_stack.cpp -o my_stack.o
 
 clean:
 

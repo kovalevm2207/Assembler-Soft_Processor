@@ -1,6 +1,12 @@
 #ifndef COMMANDS
 #define COMMANDS
 
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
+#include <cstdio>
+#include "my_stack.h"
+
 const int VERSION = 12;
 const char SIGNATURE[4] = "SVU";
 
@@ -46,5 +52,62 @@ typedef enum
     SX = 4,
     RX = 5
 } reg_t;
+
+typedef struct SPU
+{
+    int* code;
+    size_t PC;
+    stack_s stk;
+    int regs[5];
+    size_t file_size;
+    stack_s labels;
+    int* RAM;
+} SPU;
+
+
+typedef enum {
+    EMP,
+    NUM,
+    REG,
+    LBL
+} arg_t;
+
+
+typedef struct {
+    char name[16];
+    int num;
+    arg_t arg;
+} command_s;
+
+
+const size_t CAPACITY = 20;
+
+void push(SPU* spu);
+void add(SPU* spu);
+void sub(SPU* spu);
+void mod(SPU* spu);
+void div(SPU* spu);
+void out(SPU* spu);
+void mul(SPU* spu);
+void pow(SPU* spu);
+void my_sqrt(SPU* spu);
+void reset_stk(SPU* spu);
+void pushreg(SPU* spu);
+void popreg(SPU* spu);
+void call(SPU* spu);
+void ret(SPU* spu);
+void jmp(SPU* spu);
+void jb(SPU* spu);
+void jbe(SPU* spu);
+void ja(SPU* spu);
+void jae(SPU* spu);
+void je(SPU* spu);
+void jne(SPU* spu);
+void in(SPU* spu);
+void popm(SPU* spu);
+void pushm(SPU* spu);
+void draw(SPU* spu);
+void hlt(void);
+
 
 #endif // COMMANDS
