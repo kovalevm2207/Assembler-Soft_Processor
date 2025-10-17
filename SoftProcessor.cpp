@@ -9,9 +9,10 @@
 
 #include "commands.h"
 #include "ReadFile.h"
+#include "my_stack.h"
 
 const size_t MAX_LABELS_NUM = 20;
-const char* FILE_NAME = "Work_With_RAM.bin";  /*"factorial.bin";*/  /*"NotLineSquareSolver.bin";*/  /*"example2.bin";*/
+const char* FILE_NAME = /*"OUT_BAD_APPLE.bin";*/ /*"Work_With_RAM.bin";*/  /*"factorial.bin";*/  "NotLineSquareSolver.bin";  /*"example2.bin";*/
 
 typedef enum
 {
@@ -50,7 +51,7 @@ int main()
         return 1;
     }
 
-    int* RAM = (int*) calloc(4141, sizeof(int));
+    int* RAM = (int*) calloc(9213, sizeof(int));
     assert(RAM != NULL);
 
     int STATUS = ProcessorCtor(&spu, code, RAM);
@@ -106,7 +107,6 @@ ProcessorErr_t check_heder(int* code)
     assert(code != NULL);
 
     int sign_err = PROCESSOR_OK;
-    printf("VERSION = %d    code[1] = %d\n", VERSION, code[1]);
     if (code[1] != VERSION)              sign_err |= BAD_VERSION;
     for(int i = 0; i < 4; i++) {
         if (*((char*)code + i) != SIGNATURE[i]) {
@@ -174,38 +174,31 @@ ProcessorErr_t ProcessorExe(SPU* spu)
 
     int* code = spu->code;
     size_t* PC = &spu->PC;
+    int current_command = -1;
 
     while (code[*PC] != EOF) {
-        switch(code[*PC]) {
-            case RESET_STK: reset_stk(spu); break;
-            case PUSHREG:     pushreg(spu); break;
-            case SQRT:        my_sqrt(spu); break;
-            case POPREG:       popreg(spu); break;
-            case PUSHM:         pushm(spu); break;
-            case PUSH:           push(spu); break;
-            case CALL:           call(spu); break;
-            case POPM:           popm(spu); break;
-            case DRAW:           draw(spu); break;
-            case ADD:             add(spu); break;
-            case SUB:             sub(spu); break;
-            case MOD:             mod(spu); break;
-            case DIV:             div(spu); break;
-            case OUT:             out(spu); break;
-            case MUL:             mul(spu); break;
-            case POW:             pow(spu); break;
-            case RET:             ret(spu); break;
-            case JMP:             jmp(spu); break;
-            case JBE:             jbe(spu); break;
-            case JAE:             jae(spu); break;
-            case JNE:             jne(spu); break;
-            case JB:               jb(spu); break;
-            case JA:               ja(spu); break;
-            case JE:               je(spu); break;
-            case IN:               in(spu); break;
-            case HLT: hlt(); return PROCESSOR_OK;
-            default:         return COMMAND_NOT_FOUND;
+        current_command = code[*PC];
+
+        assert(current_command > -1);
+        assert(current_command < COMMANDS_NUM);
+
+        for (int i = 0; i < COMMANDS_NUM; i++) {
+            if (current_command == commands[i].num) {
+                commands[i].func(spu);
+            }
         }
+
+        if (current_command == HLT) return PROCESSOR_OK;
+
         (*PC)++;
+
+        #ifdef DUMP
+            ProcessorDump(spu);
+            getchar();
+        #endif
     }
     return PROGRAM_END_MISSING;
 }
+
+
+

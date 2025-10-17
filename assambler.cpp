@@ -1,5 +1,4 @@
 // todo: заменить strcmpr(), на hash + switch
-// todo: сделать так,чтобы программа пропускала пустые строки
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
@@ -14,8 +13,8 @@
 const int MAX_COMMAND_LENGTH = 20;
 const int MAX_REG_LENGTH = 8;
 const int MAX_LABELS_NUM = 10;
-const char* FILE_NAME = "Work_With_RAM.asm";  /*"factorial.asm";*/  /*"NotLineSquareSolver.asm";*/   /*"example2.asm";*/
-const char* CREATE_FILE = "Work_With_RAM.bin";  /*"factorial.bin";*/  /*"NotLineSquareSolver.bin";*/   /*"example2.bin";*/      //todo: read about strcat
+const char* FILE_NAME = "OUT_BAD_APPLE.asm";  /*"Work_With_RAM.asm";*/  /*"factorial.asm";*/  /*"NotLineSquareSolver.asm";*/   /*"example2.asm";*/
+const char* CREATE_FILE = "OUT_BAD_APPLE.bin";  /*"Work_With_RAM.bin";*/  /*"factorial.bin";*/  /*"NotLineSquareSolver.bin";*/   /*"example2.bin";*/      //todo: read about strcat
 
 typedef enum
 {

@@ -21,23 +21,23 @@ HEADER_FILES = $(wildcard *.h)
 all: soft_processor assambler
 
 soft_processor: SoftProcessor.o commands.o my_stack.o
-	@g++ $(DED_FLAGS) $(MODE) commands.o SoftProcessor.o my_stack.o -o soft_processor
+	g++ $(DED_FLAGS) $(MODE) commands.o SoftProcessor.o my_stack.o -o soft_processor
 
-assambler: assambler.o
-	@g++ $(DED_FLAGS) $(MODE) assambler.o -o assambler
+assambler: assambler.o commands.o my_stack.o
+	g++ $(DED_FLAGS) $(MODE) assambler.o commands.o my_stack.o -o assambler
 
 # Объектные файлы
 assambler.o: assambler.cpp $(HEADER_FILES)
-	@g++ $(DED_FLAGS) $(MODE) -c assambler.cpp -o assambler.o
+	g++ $(DED_FLAGS) $(MODE) -c assambler.cpp -o assambler.o
 
 SoftProcessor.o: SoftProcessor.cpp $(HEADER_FILES)
-	@g++ $(DED_FLAGS) $(MODE) -c SoftProcessor.cpp -o SoftProcessor.o
+	g++ $(DED_FLAGS) $(MODE) -c SoftProcessor.cpp -o SoftProcessor.o
 
 commands.o: commands.cpp $(HEADER_FILES)
-	@g++ $(DED_FLAGS) $(MODE) -c commands.cpp -o commands.o
+	g++ $(DED_FLAGS) $(MODE) -c commands.cpp -o commands.o
 
 my_stack.o: my_stack.cpp $(HEADER_FILES)
-	@g++ $(DED_FLAGS) $(MODE) -c my_stack.cpp -o my_stack.o
+	g++ $(DED_FLAGS) $(MODE) -c my_stack.cpp -o my_stack.o
 
 clean:
 
