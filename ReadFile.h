@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 struct line
 {
@@ -34,12 +35,26 @@ size_t count_lines(char* text)
     assert (text != 0);
 
     size_t linenum = 0;
-    for (size_t i = 0; text[i] != '\0'; i++) {
+    int i = 0;
+
+    while (text[i] != '\0') {
+
+        while (text[i] != '\0' && text[i] != '\n' && isspace(text[i])) i++;
+
         if (text[i] == '\n') {
+            i++;
+            continue;
+        }
+        else if (text[i] == '#') {
+            while (text[i] != '\0' && text[i] != '\n') i++;
+            continue;
+        }
+        else if (text[i] == '\0') continue;
+        else {
             linenum++;
+            while(text[i] != '\0' && text[i] != '\n') i++;
         }
     }
-    assert(linenum != 0);
 
     return linenum;
 }
@@ -50,27 +65,46 @@ void get_lines(line* lines, char* text)
     assert (lines != 0);
     assert (text != 0);
 
-    size_t count = 0, ptr_shift = 0;
+    size_t ptr_shift = 0;
+    size_t count = 0;
+    int i = 0;
 
-    for (size_t letter = 0; text[letter] != '\0'; letter++) {
-        //printf("%c ", text[letter]);
-        if (text[letter] == '#') {
-            text[letter] = '\0';
-            letter++;
-            while(text[letter] != '\n') {
-                letter++;
-            }
-            lines[count].ptr = text + ptr_shift;
-            lines[count].length = (letter + 1) - ptr_shift;
-            ptr_shift = letter + 1;
-            count++;
+    while (text[i] != '\0') {
+        while (text[i] != '\0' && text[i] != '\n' && isspace((unsigned char) text[i])) i++;
+        ptr_shift = i;
+
+        if (text[i] == '\n') {
+            i++;
+            continue;
         }
-        else if (text[letter] == '\n') {
-            text[letter] = '\0';
+        else if (text[i] == '#') {
+            while (text[i] != '\0' && text[i] != '\n') i++;
+            i++;
+            continue;
+        }
+        else if (text[i] == '\0') continue;
+        else {
             lines[count].ptr = text + ptr_shift;
-            lines[count].length = (letter + 1) - ptr_shift;
-            ptr_shift = letter + 1;
-            count++;
+            while(text[i] != '\0' && text[i] != '\n' && text[i] != '#') i++;
+
+            if (text[i] == '#') {
+                text[i] = '\0';
+                i++;
+                lines[count].length = i - ptr_shift + 1;
+                while(text[i] != '\0' && text[i] != '\n') i++;
+                if (text[i] == '\n') i++;
+                count++;
+            }
+            else if (text[i] == '\n') {
+                text[i] = '\0';
+                lines[count].length = i - ptr_shift + 1;
+                i++;
+                count++;
+            }
+            else if (text[i] == '\0') {
+                lines[count].length = i - ptr_shift + 1;
+                count++;
+            }
         }
     }
 }

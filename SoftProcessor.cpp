@@ -1,3 +1,6 @@
+// todo: system ("cls");
+// todo: unistd.h::usleep()
+
 #include <stdio.h>
 #include <math.h>
 #include <fcntl.h>
@@ -10,7 +13,7 @@
 
 const size_t CAPACITY = 20;
 const size_t MAX_LABELS_NUM = 20;
-const char* FILE_NAME = "Work_With_RAM.bin";/*"factorial.bin";*/  /*"NotLineSquareSolver.bin";*/  /*"example2.bin";*/
+const char* FILE_NAME = "Work_With_RAM.bin";  /*"factorial.bin";*/  /*"NotLineSquareSolver.bin";*/  /*"example2.bin";*/
 
 typedef enum
 {
@@ -505,6 +508,7 @@ ProcessorErr_t ProcessorExe(SPU* spu)
                 break;
             }
             case DRAW: {
+                system ("clear");
                 for (int i = 0; i < 4141; i++) {
                     if (RAM[i] == 0) printf(".");
                     else printf ("%c", RAM[i]);

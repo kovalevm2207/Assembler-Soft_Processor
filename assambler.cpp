@@ -72,6 +72,12 @@ int main()
     assert(command_lines != 0);
     get_lines(command_lines, command_text);
 
+    /*for (size_t i = 0; i < linenum; i++) {
+        puts(command_lines[i].ptr);
+        printf("\n");
+    }*/
+
+
     int* command_codes = (int*) calloc(linenum * 2 + 1 /*SIGNATURE*/ + 1 /*version*/, sizeof(int));
     assert(command_codes != NULL);
 

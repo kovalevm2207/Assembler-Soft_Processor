@@ -16,7 +16,7 @@ typedef enum
     MUL             = 7,      //                                             //
     POW             = 8,      //            CHANGE THE VERSION               //
     SQRT            = 9,      //                                             //
-    RESET_STK       = 10,      //=============================================//
+    RESET_STK       = 10,     //=============================================//
     PUSHREG         = 11,
     POPREG          = 12,
     JMP             = 13,
