@@ -1,6 +1,3 @@
-// todo: system ("cls");
-// todo: unistd.h::usleep()
-
 #include <stdio.h>
 #include <math.h>
 #include <fcntl.h>
@@ -12,7 +9,7 @@
 #include "my_stack.h"
 
 const size_t MAX_LABELS_NUM = 20;
-const char* FILE_NAME = /*"OUT_BAD_APPLE.bin";*/ /*"Work_With_RAM.bin";*/  /*"factorial.bin";*/  "NotLineSquareSolver.bin";  /*"example2.bin";*/
+const char* FILE_NAME = /*"OUT_grustny.bin";*/ /*"OUT_BAD_APPLE.bin";*/ "Work_With_RAM.bin";  /*"factorial.bin";*/  /*"NotLineSquareSolver.bin";*/  /*"example2.bin";*/
 
 typedef enum
 {
@@ -23,7 +20,6 @@ typedef enum
     BAD_SIGNATURE        = 1 << 5,
     BAD_VERSION          = 1 << 6
 } ProcessorErr_t;
-
 
 ProcessorErr_t ProcessorCtor(SPU* spu, int* code, int* RAM);
 ProcessorErr_t check_heder(int* code);
@@ -178,13 +174,12 @@ ProcessorErr_t ProcessorExe(SPU* spu)
 
     while (code[*PC] != EOF) {
         current_command = code[*PC];
-
         assert(current_command > -1);
         assert(current_command < COMMANDS_NUM);
 
         for (int i = 0; i < COMMANDS_NUM; i++) {
             if (current_command == commands[i].num) {
-                commands[i].func(spu);
+                commands[i].func_exe(spu, &commands[i]);
             }
         }
 
@@ -199,6 +194,3 @@ ProcessorErr_t ProcessorExe(SPU* spu)
     }
     return PROGRAM_END_MISSING;
 }
-
-
-
