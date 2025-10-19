@@ -18,12 +18,20 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include "my_stack.h"
+#include "ReadFile.h"
 
-const int VERSION = 12;
-const char SIGNATURE[4] = "SVU";
+typedef struct heder
+{
+    static const int VERSION = 13;
+    static constexpr char SIGNATURE[4] = "SVU";
+}heder;
 
 const size_t CAPACITY = 20;
 const int COMMANDS_NUM = 25;
+const int REGS_NUM = 6;
+const int MAX_LABELS_NUM = 20;
+const int MAX_REG_LENGTH = 8;
+const int RAM_SIZE = 9213;
 
 typedef enum
 {
@@ -64,9 +72,21 @@ typedef enum
     BX = 1,
     CX = 2,
     DX = 3,
-    SX = 4,
-    RX = 5
+    EX = 4,
+    FX = 5
 } reg_t;
+
+
+struct translator_s
+{
+    size_t linenum;
+    size_t count_line;
+    int code_num;
+    line* lines;
+    int* codes;
+    int labels[MAX_LABELS_NUM];
+};
+
 
 typedef struct SPU
 {
@@ -79,87 +99,103 @@ typedef struct SPU
     int* RAM;
 } SPU;
 
-typedef enum {
-    EMP,
-    NUM,
-    REG,
-    LBL
-} arg_t;
 
 typedef struct command_s{
     void (*func_exe)(SPU* spu, const command_s* command);
     char name[16];
     int num;
-    arg_t arg;
+    int (*func_asm)(translator_s* translator);
     int (*action_exe)(int a, int b);
 } command_s;
 
+
+//-------------------------------------------------------------//
+//                        ASM  FUNC                            //
+//-------------------------------------------------------------//
+int nothing_asm(translator_s* translator);
+int arg_asm(translator_s* translator);
+int reg_asm(translator_s* translator);
+int lbl_asm(translator_s* translator);
+//-------------------------------------------------------------//
+//                        ASM  FUNC                            //
+//-------------------------------------------------------------//
+
+//===============================================================
+//===============================================================
+
+//-------------------------------------------------------------//
+//                        EXE  FUNC                            //
+//-------------------------------------------------------------//
+
 //-----------------------------------------------------------PUSH
-int nothing(int a, int b);
-void push(SPU* spu, const command_s* commands);
-void pushreg(SPU* spu, const command_s* command);
-void pushm(SPU* spu, const command_s* command);
+int nothing_exe(int a, int b);
+void push_exe(SPU* spu, const command_s* commands);
+void pushreg_exe(SPU* spu, const command_s* command);
+void pushm_exe(SPU* spu, const command_s* command);
 //-----------------------------------------------------------PUSH
 //-----------------------------------------------------------POP
-void popreg(SPU* spu, const command_s* command);
-void popm(SPU* spu, const command_s* command);
+void popreg_exe(SPU* spu, const command_s* command);
+void popm_exe(SPU* spu, const command_s* command);
 //-----------------------------------------------------------POP
 //-----------------------------------------------------------MATH
-int add(int a, int b);
-int sub(int a, int b);
-int mod(int a, int b);
-int my_div(int a, int b);
-int mul(int a, int b);
-void math(SPU* spu, const command_s* command);
-void pow(SPU* spu, const command_s* command);
-void my_sqrt(SPU* spu, const command_s* command);
+int add_exe(int a, int b);
+int sub_exe(int a, int b);
+int mod_exe(int a, int b);
+int my_div_exe(int a, int b);
+int mul_exe(int a, int b);
+void math_exe(SPU* spu, const command_s* command);
+void pow_exe(SPU* spu, const command_s* command);
+void my_sqrt_exe(SPU* spu, const command_s* command);
 //-----------------------------------------------------------MATH
 //-----------------------------------------------------------JMPs
-int jb(int a, int b);
-int jbe(int a, int b);
-int ja(int a, int b);
-int jae(int a, int b);
-int je(int a, int b);
-int jne(int a, int b);
-void jmp(SPU* spu, const command_s* command);
-void call(SPU* spu, const command_s* command);
-void ret(SPU* spu, const command_s* command);
+int jb_exe(int a, int b);
+int jbe_exe(int a, int b);
+int ja_exe(int a, int b);
+int jae_exe(int a, int b);
+int je_exe(int a, int b);
+int jne_exe(int a, int b);
+void jmp_exe(SPU* spu, const command_s* command);
+void call_exe(SPU* spu, const command_s* command);
+void ret_exe(SPU* spu, const command_s* command);
 //------------------------------------------------------------JMPs
 //------------------------------------------------------------SYSTEM
-void out(SPU* spu, const command_s* command);
-void reset_stk(SPU* spu, const command_s* command);
-void in(SPU* spu, const command_s* command);
-void draw(SPU* spu, const command_s* command);
-void hlt(SPU* spu, const command_s* command);
+void out_exe(SPU* spu, const command_s* command);
+void reset_stk_exe(SPU* spu, const command_s* command);
+void in_exe(SPU* spu, const command_s* command);
+void draw_exe(SPU* spu, const command_s* command);
+void hlt_exe(SPU* spu, const command_s* command);
 //------------------------------------------------------------SYSTEM
 
+//-------------------------------------------------------------//
+//                        EXE  FUNC                            //
+//-------------------------------------------------------------//
 const command_s commands[COMMANDS_NUM] =
 {
- {push, "PUSH", PUSH, NUM, nothing},
- {math, "ADD", ADD, EMP, add},
- {math, "MOD", MOD, EMP, mod},
- {math, "SUB", SUB, EMP, sub},
- {math, "DIV", DIV, EMP, my_div},
- {out, "OUT", OUT, EMP, nothing},
- {math, "MUL", MUL, EMP, mul},
- {pow, "POW", POW, NUM, nothing},
- {my_sqrt, "SQRT", SQRT, EMP, nothing},
- {reset_stk, "RESET_STK", RESET_STK, EMP, nothing},
- {pushreg, "PUSHREG", PUSHREG, REG, nothing},
- {popreg, "POPREG", POPREG, REG, nothing},
- {jmp, "JB", JB, LBL, jb},
- {jmp, "JBE", JBE, LBL, jb},
- {jmp, "JA", JA, LBL, ja},
- {jmp, "JAE", JAE, LBL, jae},
- {jmp, "JE", JE, LBL, je},
- {jmp, "JNE", JNE, LBL, jne},
- {call, "CALL", CALL, LBL, nothing},
- {ret, "RET", RET, EMP, nothing},
- {in, "IN", IN, EMP, nothing},
- {pushm, "PUSHM", PUSHM, REG, nothing},
- {popm, "POPM", POPM, REG, nothing},
- {draw, "DRAW", DRAW, EMP, nothing},
- {hlt, "HLT", HLT, EMP, nothing}
+ {push_exe,      "PUSH",      PUSH,      arg_asm,     nothing_exe},
+ {math_exe,      "ADD",       ADD,       nothing_asm, add_exe},
+ {math_exe,      "MOD",       MOD,       nothing_asm, mod_exe},
+ {math_exe,      "SUB",       SUB,       nothing_asm, sub_exe},
+ {math_exe,      "DIV",       DIV,       nothing_asm, my_div_exe},
+ {out_exe,       "OUT",       OUT,       nothing_asm, nothing_exe},
+ {math_exe,      "MUL",       MUL,       nothing_asm, mul_exe},
+ {pow_exe,       "POW",       POW,       arg_asm,     nothing_exe},
+ {my_sqrt_exe,   "SQRT",      SQRT,      nothing_asm, nothing_exe},
+ {reset_stk_exe, "RESET_STK", RESET_STK, nothing_asm, nothing_exe},
+ {pushreg_exe,   "PUSHREG",   PUSHREG,   reg_asm,     nothing_exe},
+ {popreg_exe,    "POPREG",    POPREG,    reg_asm,     nothing_exe},
+ {jmp_exe,       "JB",        JB,        lbl_asm,     jb_exe},
+ {jmp_exe,       "JBE",       JBE,       lbl_asm,     jb_exe},
+ {jmp_exe,       "JA",        JA,        lbl_asm,     ja_exe},
+ {jmp_exe,       "JAE",       JAE,       lbl_asm,     jae_exe},
+ {jmp_exe,       "JE",        JE,        lbl_asm,     je_exe},
+ {jmp_exe,       "JNE",       JNE,       lbl_asm,     jne_exe},
+ {call_exe,      "CALL",      CALL,      lbl_asm,     nothing_exe},
+ {ret_exe,       "RET",       RET,       nothing_asm, nothing_exe},
+ {in_exe,        "IN",        IN,        nothing_asm, nothing_exe},
+ {pushm_exe,     "PUSHM",     PUSHM,     reg_asm,     nothing_exe},
+ {popm_exe,      "POPM",      POPM,      reg_asm,     nothing_exe},
+ {draw_exe,      "DRAW",      DRAW,      nothing_asm, nothing_exe},
+ {hlt_exe,       "HLT",       HLT,       nothing_asm, nothing_exe},
 };
 
 #endif // COMMANDS

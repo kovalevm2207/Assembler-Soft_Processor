@@ -1,22 +1,114 @@
 #include "commands.h"
+//-------------------------------------------------------------//
+//                        ASM  FUNC                            //
+//-------------------------------------------------------------//
+
+//--------------------------------------------------------------NOTHING
+int nothing_asm(translator_s* translator) {(void) translator; return 0;}
+//--------------------------------------------------------------NOTHING
+//--------------------------------------------------------------ARG
+int arg_asm(translator_s* translator)
+{
+    assert(translator != NULL);
+
+    int data = 0;
+
+    if (sscanf(translator->lines[translator->count_line].ptr,"%*s %d", &data) != 1) {
+        printf(CHANGE_ON RED TEXT_COLOR "Missing argument for a function that must have an argument\n" RESET);
+        //do_help();
+        return 1/*NOTFOUND_ARG*/;
+    }
+    #ifdef DUMP
+        printf("arg = %d", data);
+        getchar();
+    #endif
+    translator->codes[translator->code_num++] = data;
+    return /*ASSEMBLER_OK*/0;
+}
+//-------------------------------------------------------------ARG
+//-------------------------------------------------------------REG
+int reg_asm(translator_s* translator)
+{
+    assert(translator != NULL);
+
+    #ifdef DUMP
+        const int REG = 0;
+        const int MEM_I = 1;
+        int MODE = REG;
+    #endif
+
+    char reg[MAX_REG_LENGTH] = {};
+    if (sscanf(translator->lines[translator->count_line].ptr, "%*s [%[^]]", reg) != 1) {
+        if (sscanf(translator->lines[translator->count_line].ptr,"%*s %s", reg) != 1) {
+            printf(CHANGE_ON RED TEXT_COLOR "Missing reg for a function that must have an reg\n" RESET);
+            //do_help();
+            return 1/*NOTFOUND_REG*/;
+        }
+    } else {
+        #ifdef DUMP
+            printf("[");
+            MODE = MEM_I
+        #endif
+        ;
+    }
+
+    for(int i = 0; i < REGS_NUM; i++) {
+        if(reg[0] == 'A' + i) {
+            translator->codes[(translator->code_num)++] = i;
+        }
+    }
+
+    #ifdef DUMP
+        printf("%s", reg);
+        if (MODE == MEM_I) printf("]");
+        getchar();
+    #endif
+
+    return 0/*ASSEMBLER_OK*/;
+}
+//---------------------------------------------------------------REG
+//---------------------------------------------------------------LBL
+int lbl_asm(translator_s* translator)
+{
+    int label = 0;
+    sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
+    #ifdef DUMP
+        printf(":%d or %d", label, translator->labels[label]); getchar();
+        getchar();
+    #endif
+    translator->codes[(translator->code_num)++] = translator->labels[label];
+
+    return 0/*ASSEMBLER_OK*/;
+}
+//--------------------------------------------------------------LBL
+//-------------------------------------------------------------//
+//                        ASM  FUNC                            //
+//-------------------------------------------------------------//
+
+//=================================================================
+//=================================================================
+
+//-------------------------------------------------------------//
+//                        EXE  FUNC                            //
+//-------------------------------------------------------------//
 
 //-----------------------------------------------------------PUSH
-int nothing(int a, int b) {(void)a; (void)b; return 0;}
+int nothing_exe(int a, int b) {(void)a; (void)b; return 0;}
 
-void push(SPU* spu, const command_s* command) {
+void push_exe(SPU* spu, const command_s* command) {
     command->action_exe(0, 0);
     stack_t data = spu->code[++(spu->PC)];
     StackPush(&spu->stk, data);
 }
 
-void pushreg(SPU* spu, const command_s* command) {
+void pushreg_exe(SPU* spu, const command_s* command) {
     command->action_exe(0, 0);
 
     reg_t reg = (reg_t) spu->code[++(spu->PC)];
     StackPush(&spu->stk, spu->regs[reg]);
 }
 
-void pushm(SPU* spu, const command_s* command) {
+void pushm_exe(SPU* spu, const command_s* command) {
     command->action_exe(0, 0);
 
     int mem_i = spu->code[++(spu->PC)];
@@ -24,14 +116,14 @@ void pushm(SPU* spu, const command_s* command) {
 }
 //-----------------------------------------------------------PUSH
 //-----------------------------------------------------------POP
-void popreg(SPU* spu, const command_s* command) {
+void popreg_exe(SPU* spu, const command_s* command) {
     command->action_exe(0, 0);
 
     reg_t reg = (reg_t) spu->code[++(spu->PC)];
     StackPop(&spu->stk, &spu->regs[reg]);
 }
 
-void popm(SPU* spu, const command_s* command) {
+void popm_exe(SPU* spu, const command_s* command) {
     command->action_exe(0, 0);
 
     stack_t data = 0;
@@ -41,13 +133,13 @@ void popm(SPU* spu, const command_s* command) {
 }
 //-----------------------------------------------------------POP
 //-----------------------------------------------------------MATH
-int add(int a, int b) {return a + b; }
-int sub(int a, int b) {return b - a; }
-int mod(int a, int b) {return b % a; }
-int my_div(int a, int b) {return b / a; }
-int mul(int a, int b) {return a * b; }
+int add_exe(int a, int b) {return a + b; }
+int sub_exe(int a, int b) {return b - a; }
+int mod_exe(int a, int b) {return b % a; }
+int my_div_exe(int a, int b) {return b / a; }
+int mul_exe(int a, int b) {return a * b; }
 
-void math(SPU* spu, const command_s* command)
+void math_exe(SPU* spu, const command_s* command)
 {
     stack_t a = 0, b = 0;
     StackPop(&spu->stk, &a);
@@ -57,7 +149,7 @@ void math(SPU* spu, const command_s* command)
     StackPush(&spu->stk, c);
 }
 
-void pow(SPU* spu, const command_s* command) {
+void pow_exe(SPU* spu, const command_s* command) {
     command->action_exe(0, 0);
 
     stack_t a = 0, n = spu->code[++(spu->PC)];
@@ -67,7 +159,7 @@ void pow(SPU* spu, const command_s* command) {
     StackPush(&spu->stk, c);
 }
 
-void my_sqrt(SPU* spu, const command_s* command) {
+void my_sqrt_exe(SPU* spu, const command_s* command) {
     command->action_exe(0, 0);
 
     stack_t a = 0;
@@ -78,14 +170,14 @@ void my_sqrt(SPU* spu, const command_s* command) {
 }
 //-----------------------------------------------------------MATH
 //-----------------------------------------------------------JMPs
-int jb(int a, int b) { return a < b; }
-int jbe(int a, int b) { return a <= b; }
-int ja(int a, int b) { return a > b; }
-int jae(int a, int b) { return a >= b; }
-int je(int a, int b) { return a == b; }
-int jne(int a, int b) { return a != b; }
+int jb_exe(int a, int b) { return a < b; }
+int jbe_exe(int a, int b) { return a <= b; }
+int ja_exe(int a, int b) { return a > b; }
+int jae_exe(int a, int b) { return a >= b; }
+int je_exe(int a, int b) { return a == b; }
+int jne_exe(int a, int b) { return a != b; }
 
-void jmp(SPU* spu, const command_s* command)
+void jmp_exe(SPU* spu, const command_s* command)
 {
     stack_t a = 0, b = 0;
     StackPop(&spu->stk, &b);
@@ -97,7 +189,7 @@ void jmp(SPU* spu, const command_s* command)
     } else (spu->PC)++;
 }
 
-void call(SPU* spu, const command_s* command) {
+void call_exe(SPU* spu, const command_s* command) {
     command->action_exe(0, 0);
 
     StackPush(&spu->labels, spu->PC);
@@ -105,7 +197,7 @@ void call(SPU* spu, const command_s* command) {
     spu->PC = new_pc - 1;
 }
 
-void ret(SPU* spu, const command_s* command) {
+void ret_exe(SPU* spu, const command_s* command) {
     command->action_exe(0, 0);
 
     stack_t new_pc = 0;
@@ -114,7 +206,7 @@ void ret(SPU* spu, const command_s* command) {
 }
 //------------------------------------------------------------JMPs
 //------------------------------------------------------------SYSTEM
-void out(SPU* spu, const command_s* command) {
+void out_exe(SPU* spu, const command_s* command) {
     command->action_exe(0, 0);
 
     stack_t data = 0;
@@ -123,14 +215,14 @@ void out(SPU* spu, const command_s* command) {
     printf(CHANGE_ON BLUE TEXT_COLOR "answer = %10d\n" RESET, data);
 }
 
-void reset_stk(SPU* spu, const command_s* command) {
+void reset_stk_exe(SPU* spu, const command_s* command) {
     command->action_exe(0, 0);
 
     StackDtor(&spu->stk);
     StackCtor(&spu->stk, CAPACITY);
 }
 
-void in(SPU* spu, const command_s* command) {
+void in_exe(SPU* spu, const command_s* command) {
     command->action_exe(0, 0);
 
     int a = 0;
@@ -140,7 +232,7 @@ void in(SPU* spu, const command_s* command) {
     StackPush(&spu->stk, a);
 }
 
-void draw(SPU* spu, const command_s* command) {
+void draw_exe(SPU* spu, const command_s* command) {
     command->action_exe(0, 0);
 
     system ("clear");
@@ -153,10 +245,14 @@ void draw(SPU* spu, const command_s* command) {
     usleep(100000);
 }
 
-void hlt(SPU* spu, const command_s* command) {
+void hlt_exe(SPU* spu, const command_s* command) {
     command->action_exe(0, 0);
     (void)spu;
 
     printf("You end the program\n");
 }
 //------------------------------------------------------------SYSTEM
+
+//-------------------------------------------------------------//
+//                        EXE  FUNC                            //
+//-------------------------------------------------------------//

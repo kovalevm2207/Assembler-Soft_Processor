@@ -8,7 +8,6 @@
 #include "ReadFile.h"
 #include "my_stack.h"
 
-const size_t MAX_LABELS_NUM = 20;
 const char* FILE_NAME = /*"OUT_grustny.bin";*/ /*"OUT_BAD_APPLE.bin";*/ "Work_With_RAM.bin";  /*"factorial.bin";*/  /*"NotLineSquareSolver.bin";*/  /*"example2.bin";*/
 
 typedef enum
@@ -18,10 +17,11 @@ typedef enum
     PROGRAM_END_MISSING  = 1 << 3,
     BAD_PUSH             = 1 << 4,
     BAD_SIGNATURE        = 1 << 5,
-    BAD_VERSION          = 1 << 6
+    BAD_VERSION          = 1 << 6,
+    READ_FILE_ERR        = 1 << 7
 } ProcessorErr_t;
 
-ProcessorErr_t ProcessorCtor(SPU* spu, int* code, int* RAM);
+ProcessorErr_t ProcessorCtor(SPU* spu);
 ProcessorErr_t check_heder(int* code);
 ProcessorErr_t ProcessorExe(SPU* spu);
 ProcessorErr_t ProcessorDtor(SPU* spu);
@@ -31,26 +31,7 @@ int main()
 {
     SPU spu = {};
 
-    FILE* file = fopen(FILE_NAME, "rb");
-    assert(file != NULL);
-
-    if (fread(&(spu.file_size), sizeof(size_t), 1, file) != 1) {
-        printf(CHANGE_ON RED TEXT_COLOR "ERROR! FILE SIZE READ FAILED\n" RESET);
-        return 1;
-    }
-
-    int* code = (int*) calloc(spu.file_size, sizeof(char));
-    assert(code != NULL);
-
-    if (fread(code, sizeof(int), spu.file_size/sizeof(int), file) != spu.file_size/sizeof(int)) {
-        printf(CHANGE_ON RED TEXT_COLOR "ERROR! CODE READ FAILED\n" RESET);
-        return 1;
-    }
-
-    int* RAM = (int*) calloc(9213, sizeof(int));
-    assert(RAM != NULL);
-
-    int STATUS = ProcessorCtor(&spu, code, RAM);
+    int STATUS = ProcessorCtor(&spu);
     if(STATUS != PROCESSOR_OK) {
         printf(CHANGE_ON RED TEXT_COLOR "ERROR! PROCESSOR_CTOR FAILED; STATUS = %d\n", STATUS);
         if (STATUS & BAD_VERSION) printf("BAD_VERSION(%d)\n", BAD_VERSION);
@@ -58,8 +39,6 @@ int main()
         ProcessorDtor(&spu);
         return 1;
     }
-
-    fclose(file);
 
     ProcessorExe(&spu);
 
@@ -69,10 +48,29 @@ int main()
 }
 
 
-ProcessorErr_t ProcessorCtor(SPU* spu, int* code, int* RAM)
+ProcessorErr_t ProcessorCtor(SPU* spu)
 {
     assert(spu != NULL);
+
+    FILE* file = fopen(FILE_NAME, "rb");
+    assert(file != NULL);
+
+    if (fread(&(spu->file_size), sizeof(size_t), 1, file) != 1) {
+        printf(CHANGE_ON RED TEXT_COLOR "ERROR! FILE SIZE READ FAILED\n" RESET);
+        return READ_FILE_ERR;
+    }
+
+    int* code = (int*) calloc(spu->file_size, sizeof(char));
     assert(code != NULL);
+
+    if (fread(code, sizeof(int), spu->file_size/sizeof(int), file) != spu->file_size/sizeof(int)) {
+        printf(CHANGE_ON RED TEXT_COLOR "ERROR! CODE READ FAILED\n" RESET);
+        return READ_FILE_ERR;
+    }
+
+    fclose(file);
+
+    int* RAM = (int*) calloc(RAM_SIZE, sizeof(int));
     assert(RAM != NULL);
 
     int STATUS = PROCESSOR_OK;
@@ -103,9 +101,9 @@ ProcessorErr_t check_heder(int* code)
     assert(code != NULL);
 
     int sign_err = PROCESSOR_OK;
-    if (code[1] != VERSION)              sign_err |= BAD_VERSION;
+    if (code[1] != heder::VERSION)              sign_err |= BAD_VERSION;
     for(int i = 0; i < 4; i++) {
-        if (*((char*)code + i) != SIGNATURE[i]) {
+        if (*((char*)code + i) != heder::SIGNATURE[i]) {
             sign_err |= BAD_SIGNATURE;
         }
     }
@@ -119,7 +117,7 @@ ProcessorErr_t ProcessorDtor(SPU* spu)
 
     StackDtor(&spu->stk);
     StackDtor(&spu->labels);
-    spu->PC = 0;
+    spu->PC = 2;
     for (int i = 0; i < 4; i++) {
         spu->regs[i] = 0;
     }
@@ -177,9 +175,10 @@ ProcessorErr_t ProcessorExe(SPU* spu)
         assert(current_command > -1);
         assert(current_command < COMMANDS_NUM);
 
-        for (int i = 0; i < COMMANDS_NUM; i++) {
+        for (int i = 0; i <= COMMANDS_NUM; i++) {
             if (current_command == commands[i].num) {
                 commands[i].func_exe(spu, &commands[i]);
+                break;
             }
         }
 
