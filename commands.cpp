@@ -18,11 +18,12 @@ int arg_asm(translator_s* translator)
         //do_help();
         return 1/*NOTFOUND_ARG*/;
     }
+    translator->codes[translator->code_num++] = data;
+
     #ifdef DUMP
         printf("arg = %d", data);
         getchar();
     #endif
-    translator->codes[translator->code_num++] = data;
     return /*ASSEMBLER_OK*/0;
 }
 //-------------------------------------------------------------ARG
@@ -95,20 +96,23 @@ int lbl_asm(translator_s* translator)
 //-----------------------------------------------------------PUSH
 int nothing_exe(int a, int b) {(void)a; (void)b; return 0;}
 
-void push_exe(SPU* spu, const command_s* command) {
+void push_exe(SPU* spu, const command_s* command)
+{
     command->action_exe(0, 0);
     stack_t data = spu->code[++(spu->PC)];
     StackPush(&spu->stk, data);
 }
 
-void pushreg_exe(SPU* spu, const command_s* command) {
+void pushreg_exe(SPU* spu, const command_s* command)
+{
     command->action_exe(0, 0);
 
     reg_t reg = (reg_t) spu->code[++(spu->PC)];
     StackPush(&spu->stk, spu->regs[reg]);
 }
 
-void pushm_exe(SPU* spu, const command_s* command) {
+void pushm_exe(SPU* spu, const command_s* command)
+{
     command->action_exe(0, 0);
 
     int mem_i = spu->code[++(spu->PC)];
@@ -116,14 +120,16 @@ void pushm_exe(SPU* spu, const command_s* command) {
 }
 //-----------------------------------------------------------PUSH
 //-----------------------------------------------------------POP
-void popreg_exe(SPU* spu, const command_s* command) {
+void popreg_exe(SPU* spu, const command_s* command)
+{
     command->action_exe(0, 0);
 
     reg_t reg = (reg_t) spu->code[++(spu->PC)];
     StackPop(&spu->stk, &spu->regs[reg]);
 }
 
-void popm_exe(SPU* spu, const command_s* command) {
+void popm_exe(SPU* spu, const command_s* command)
+{
     command->action_exe(0, 0);
 
     stack_t data = 0;
@@ -149,7 +155,8 @@ void math_exe(SPU* spu, const command_s* command)
     StackPush(&spu->stk, c);
 }
 
-void pow_exe(SPU* spu, const command_s* command) {
+void pow_exe(SPU* spu, const command_s* command)
+{
     command->action_exe(0, 0);
 
     stack_t a = 0, n = spu->code[++(spu->PC)];
@@ -159,7 +166,8 @@ void pow_exe(SPU* spu, const command_s* command) {
     StackPush(&spu->stk, c);
 }
 
-void my_sqrt_exe(SPU* spu, const command_s* command) {
+void my_sqrt_exe(SPU* spu, const command_s* command)
+{
     command->action_exe(0, 0);
 
     stack_t a = 0;
@@ -189,7 +197,8 @@ void jmp_exe(SPU* spu, const command_s* command)
     } else (spu->PC)++;
 }
 
-void call_exe(SPU* spu, const command_s* command) {
+void call_exe(SPU* spu, const command_s* command)
+{
     command->action_exe(0, 0);
 
     StackPush(&spu->labels, spu->PC);
@@ -197,7 +206,8 @@ void call_exe(SPU* spu, const command_s* command) {
     spu->PC = new_pc - 1;
 }
 
-void ret_exe(SPU* spu, const command_s* command) {
+void ret_exe(SPU* spu, const command_s* command)
+{
     command->action_exe(0, 0);
 
     stack_t new_pc = 0;
@@ -206,7 +216,8 @@ void ret_exe(SPU* spu, const command_s* command) {
 }
 //------------------------------------------------------------JMPs
 //------------------------------------------------------------SYSTEM
-void out_exe(SPU* spu, const command_s* command) {
+void out_exe(SPU* spu, const command_s* command)
+{
     command->action_exe(0, 0);
 
     stack_t data = 0;
@@ -215,14 +226,16 @@ void out_exe(SPU* spu, const command_s* command) {
     printf(CHANGE_ON BLUE TEXT_COLOR "answer = %10d\n" RESET, data);
 }
 
-void reset_stk_exe(SPU* spu, const command_s* command) {
+void reset_stk_exe(SPU* spu, const command_s* command)
+{
     command->action_exe(0, 0);
 
     StackDtor(&spu->stk);
     StackCtor(&spu->stk, CAPACITY);
 }
 
-void in_exe(SPU* spu, const command_s* command) {
+void in_exe(SPU* spu, const command_s* command)
+{
     command->action_exe(0, 0);
 
     int a = 0;
@@ -232,7 +245,8 @@ void in_exe(SPU* spu, const command_s* command) {
     StackPush(&spu->stk, a);
 }
 
-void draw_exe(SPU* spu, const command_s* command) {
+void draw_exe(SPU* spu, const command_s* command)
+{
     command->action_exe(0, 0);
 
     system ("clear");
@@ -245,11 +259,63 @@ void draw_exe(SPU* spu, const command_s* command) {
     usleep(100000);
 }
 
-void hlt_exe(SPU* spu, const command_s* command) {
+void hlt_exe(SPU* spu, const command_s* command)
+{
     command->action_exe(0, 0);
     (void)spu;
 
     printf("You end the program\n");
+}
+void help_exe(SPU* spu, const command_s* command)
+{
+    (void) spu;
+    (void) command;
+    printf("\nusage: main_calc " CHANGE_ON BLUE TEXT_COLOR "[HELP] [HLT] [PUSH] [OUT]\n"
+           "                 [SUB] [DIV] [MUL] [POW] [SQRT]\n"
+           "                 [RESET_STK] [PUSHREG] [POPREG]\n"
+           "                 [JB] [JBE] [JA] [JAE] [JE]\n"
+           "                 [JNE] [CALL] [RET] [IN]\n"
+           "                 [PUSHM] [POPM] [DRAW] [HLT]\n"
+           RESET "\n"
+	       "These are common main_calc commands used in various situations:\n"
+           "You can use " CHANGE_ON PURPLE TEXT_COLOR "only integers" RESET " value\n"
+	       "\n"
+           CHANGE_ON GREEN TEXT_COLOR "HELP        " RESET "         cli flags help message\n"
+	       CHANGE_ON GREEN TEXT_COLOR "HLT         " RESET "         HaLT (end the program)\n"
+           CHANGE_ON GREEN TEXT_COLOR "PUSH     num" RESET "         save the value (num) to calculator memory\n"
+           CHANGE_ON GREEN TEXT_COLOR "OUT         " RESET "         retrieve the last saved value from calculator memory\n"
+           CHANGE_ON GREEN TEXT_COLOR "ADD         " RESET "         add the two last numbers stored in memory\n"
+           CHANGE_ON GREEN TEXT_COLOR "SUB         " RESET "         subtract the last number in memory from the second last number in memory\n"
+           CHANGE_ON GREEN TEXT_COLOR "DIV         " RESET "         divide the last number stored in memory by the second last number stored in memory\n"
+           CHANGE_ON GREEN TEXT_COLOR "MUL         " RESET "         multiply the two last numbers stored in memory\n"
+           CHANGE_ON GREEN TEXT_COLOR "POW      num" RESET "         raise the last number stored in memory to a power (num)\n"
+           CHANGE_ON GREEN TEXT_COLOR "SQRT        " RESET "         calculate the square root of the last number in memory\n"
+           CHANGE_ON GREEN TEXT_COLOR "RESET_STK   " RESET "         Update the stack pointer\n"
+           CHANGE_ON GREEN TEXT_COLOR "PUSHREG  reg" RESET "         Push the register value onto the stack (reg)\n"
+           CHANGE_ON GREEN TEXT_COLOR "POPREG   reg" RESET "         Pop the value from the stack into the register (reg)\n"
+           CHANGE_ON GREEN TEXT_COLOR "JB    :(lbl)" RESET "         Jump to the label (lbl) if the second-to-last stack value is less than the last stack value.\n"
+           CHANGE_ON GREEN TEXT_COLOR "JBE   :(lbl)" RESET "         Jump to the label (lbl) if the second-to-last stack value is less than or equal to the last stack value.\n"
+           CHANGE_ON GREEN TEXT_COLOR "JA    :(lbl)" RESET "         Jump to the label (lbl) if the second-to-last value on the stack is greater than the last value on the stack\n"
+           CHANGE_ON GREEN TEXT_COLOR "JAE   :(lbl)" RESET "         Jump to the label (lbl) if the stack's second-to-last value is greater than or equal to the last value\n"
+           CHANGE_ON GREEN TEXT_COLOR "JE    :(lbl)" RESET "         Jump to the label (lbl) if the second-to-last stack value equals the last stack value\n"
+           CHANGE_ON GREEN TEXT_COLOR "JNE   :(lbl)" RESET "         Jump to the label (lbl) if the second-to-last stack value is not equal to the last stack value.\n"
+           CHANGE_ON GREEN TEXT_COLOR "CALL  :(lbl)" RESET "         Call the function at the label (lbl)\n"
+           CHANGE_ON GREEN TEXT_COLOR "RET         " RESET "         Return from the function\n"
+           CHANGE_ON GREEN TEXT_COLOR "IN          " RESET "         Read a value from the keyboard and push it onto the stack\n"
+           CHANGE_ON GREEN TEXT_COLOR "PUSHM    reg" RESET "         Push the value from the memory address specified by the register onto the stack.\n"
+           CHANGE_ON GREEN TEXT_COLOR "POPM     reg" RESET "         Store the value from the stack into the memory cell at the address specified by the register value.\n"
+           CHANGE_ON GREEN TEXT_COLOR "DRAW        " RESET "         Display a graphical representation of the RAM contents.\n"
+           CHANGE_ON GREEN TEXT_COLOR "HLT         " RESET "         Terminate the program.\n"
+           "\n"
+           "Valid register names: " CHANGE_ON GREEN TEXT_COLOR "AX, BX , CX, DX, EX, FX" RESET "\n"
+           "Examples of commands:\n"
+           "                     PUSH 1\n"
+           "                     PUSHREG AX\n"
+           "                     CALL :1\n"
+           "                     :1\n"
+           "                     PUSHM BX\n"
+           "                     RET\n"
+           "                     HLT\n");
 }
 //------------------------------------------------------------SYSTEM
 

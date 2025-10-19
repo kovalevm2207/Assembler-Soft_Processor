@@ -8,30 +8,32 @@
 #include "ReadFile.h"
 #include "my_stack.h"
 
-const char* FILE_NAME = /*"OUT_grustny.bin";*/ /*"OUT_BAD_APPLE.bin";*/ "Work_With_RAM.bin";  /*"factorial.bin";*/  /*"NotLineSquareSolver.bin";*/  /*"example2.bin";*/
-
 typedef enum
 {
     PROCESSOR_OK         = 1 << 1,
-    COMMAND_NOT_FOUND    = 1 << 2,
-    PROGRAM_END_MISSING  = 1 << 3,
-    BAD_PUSH             = 1 << 4,
-    BAD_SIGNATURE        = 1 << 5,
-    BAD_VERSION          = 1 << 6,
-    READ_FILE_ERR        = 1 << 7
+    PROGRAM_END_MISSING  = 1 << 2,
+    BAD_SIGNATURE        = 1 << 3,
+    BAD_VERSION          = 1 << 4,
+    READ_FILE_ERR        = 1 << 5,
+    MAIN_ARG_NUM_ERR     = 1 << 6
 } ProcessorErr_t;
 
-ProcessorErr_t ProcessorCtor(SPU* spu);
+ProcessorErr_t MainArgAnalyze(int argc);
+int* ReadBin(char* argv, SPU* spu);
+ProcessorErr_t ProcessorCtor(SPU* spu, int* code);
 ProcessorErr_t check_heder(int* code);
 ProcessorErr_t ProcessorExe(SPU* spu);
 ProcessorErr_t ProcessorDtor(SPU* spu);
 ProcessorErr_t ProcessorDump(SPU* spu);
 
-int main()
+int main(int argc, char* argv[])
 {
-    SPU spu = {};
+    if (MainArgAnalyze(argc) != PROCESSOR_OK) return 1;
 
-    int STATUS = ProcessorCtor(&spu);
+    SPU spu = {};
+    int* code = ReadBin(argv[1],&spu);
+    if(code == NULL) return 1;
+    int STATUS = ProcessorCtor(&spu, code);
     if(STATUS != PROCESSOR_OK) {
         printf(CHANGE_ON RED TEXT_COLOR "ERROR! PROCESSOR_CTOR FAILED; STATUS = %d\n", STATUS);
         if (STATUS & BAD_VERSION) printf("BAD_VERSION(%d)\n", BAD_VERSION);
@@ -47,17 +49,24 @@ int main()
     return 0;
 }
 
-
-ProcessorErr_t ProcessorCtor(SPU* spu)
+ProcessorErr_t MainArgAnalyze(int argc)
 {
-    assert(spu != NULL);
+    if (argc != 2) {
+        printf(CHANGE_ON RED TEXT_COLOR "You should write: ./assambler <file name from cur dir>.bin\n" RESET);
+        return MAIN_ARG_NUM_ERR;
+    }
+    else return PROCESSOR_OK;
+}
 
-    FILE* file = fopen(FILE_NAME, "rb");
+
+int* ReadBin(char* argv, SPU* spu)
+{
+    FILE* file = fopen(argv, "rb");
     assert(file != NULL);
 
     if (fread(&(spu->file_size), sizeof(size_t), 1, file) != 1) {
         printf(CHANGE_ON RED TEXT_COLOR "ERROR! FILE SIZE READ FAILED\n" RESET);
-        return READ_FILE_ERR;
+        return NULL;
     }
 
     int* code = (int*) calloc(spu->file_size, sizeof(char));
@@ -65,10 +74,17 @@ ProcessorErr_t ProcessorCtor(SPU* spu)
 
     if (fread(code, sizeof(int), spu->file_size/sizeof(int), file) != spu->file_size/sizeof(int)) {
         printf(CHANGE_ON RED TEXT_COLOR "ERROR! CODE READ FAILED\n" RESET);
-        return READ_FILE_ERR;
+        return NULL;
     }
 
     fclose(file);
+    return code;
+}
+
+
+ProcessorErr_t ProcessorCtor(SPU* spu, int* code)
+{
+    assert(spu != NULL);
 
     int* RAM = (int*) calloc(RAM_SIZE, sizeof(int));
     assert(RAM != NULL);
@@ -175,13 +191,8 @@ ProcessorErr_t ProcessorExe(SPU* spu)
         assert(current_command > -1);
         assert(current_command < COMMANDS_NUM);
 
-        for (int i = 0; i <= COMMANDS_NUM; i++) {
-            if (current_command == commands[i].num) {
-                commands[i].func_exe(spu, &commands[i]);
-                break;
-            }
-        }
-
+        commands[current_command].func_exe(spu, &commands[current_command]); // так как в массиве структур номер команды совпадает
+                                                                             // с номером ее ячейки в массиве
         if (current_command == HLT) return PROCESSOR_OK;
 
         (*PC)++;

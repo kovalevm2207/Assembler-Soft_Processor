@@ -9,6 +9,8 @@
 //                                             //
 //=============================================//
 
+// Пустые строки сбивают нумерацию в данной реализации
+
 #ifndef COMMANDS
 #define COMMANDS
 
@@ -27,7 +29,7 @@ typedef struct heder
 }heder;
 
 const size_t CAPACITY = 20;
-const int COMMANDS_NUM = 25;
+const int COMMANDS_NUM = 26;
 const int REGS_NUM = 6;
 const int MAX_LABELS_NUM = 20;
 const int MAX_REG_LENGTH = 8;
@@ -60,9 +62,7 @@ typedef enum
     POPM            = 22,
     DRAW            = 23,
     HLT             = 24,
-    START           = 25,
-    INVALID_COMMAND = 26,
-    HELP            = 27
+    HELP            = 25
 } command_t;
 
 
@@ -102,10 +102,10 @@ typedef struct SPU
 
 typedef struct command_s{
     void (*func_exe)(SPU* spu, const command_s* command);
+    int (*action_exe)(int a, int b);
     char name[16];
     int num;
     int (*func_asm)(translator_s* translator);
-    int (*action_exe)(int a, int b);
 } command_s;
 
 
@@ -164,6 +164,7 @@ void reset_stk_exe(SPU* spu, const command_s* command);
 void in_exe(SPU* spu, const command_s* command);
 void draw_exe(SPU* spu, const command_s* command);
 void hlt_exe(SPU* spu, const command_s* command);
+void help_exe(SPU* spu, const command_s* command);
 //------------------------------------------------------------SYSTEM
 
 //-------------------------------------------------------------//
@@ -171,31 +172,32 @@ void hlt_exe(SPU* spu, const command_s* command);
 //-------------------------------------------------------------//
 const command_s commands[COMMANDS_NUM] =
 {
- {push_exe,      "PUSH",      PUSH,      arg_asm,     nothing_exe},
- {math_exe,      "ADD",       ADD,       nothing_asm, add_exe},
- {math_exe,      "MOD",       MOD,       nothing_asm, mod_exe},
- {math_exe,      "SUB",       SUB,       nothing_asm, sub_exe},
- {math_exe,      "DIV",       DIV,       nothing_asm, my_div_exe},
- {out_exe,       "OUT",       OUT,       nothing_asm, nothing_exe},
- {math_exe,      "MUL",       MUL,       nothing_asm, mul_exe},
- {pow_exe,       "POW",       POW,       arg_asm,     nothing_exe},
- {my_sqrt_exe,   "SQRT",      SQRT,      nothing_asm, nothing_exe},
- {reset_stk_exe, "RESET_STK", RESET_STK, nothing_asm, nothing_exe},
- {pushreg_exe,   "PUSHREG",   PUSHREG,   reg_asm,     nothing_exe},
- {popreg_exe,    "POPREG",    POPREG,    reg_asm,     nothing_exe},
- {jmp_exe,       "JB",        JB,        lbl_asm,     jb_exe},
- {jmp_exe,       "JBE",       JBE,       lbl_asm,     jb_exe},
- {jmp_exe,       "JA",        JA,        lbl_asm,     ja_exe},
- {jmp_exe,       "JAE",       JAE,       lbl_asm,     jae_exe},
- {jmp_exe,       "JE",        JE,        lbl_asm,     je_exe},
- {jmp_exe,       "JNE",       JNE,       lbl_asm,     jne_exe},
- {call_exe,      "CALL",      CALL,      lbl_asm,     nothing_exe},
- {ret_exe,       "RET",       RET,       nothing_asm, nothing_exe},
- {in_exe,        "IN",        IN,        nothing_asm, nothing_exe},
- {pushm_exe,     "PUSHM",     PUSHM,     reg_asm,     nothing_exe},
- {popm_exe,      "POPM",      POPM,      reg_asm,     nothing_exe},
- {draw_exe,      "DRAW",      DRAW,      nothing_asm, nothing_exe},
- {hlt_exe,       "HLT",       HLT,       nothing_asm, nothing_exe},
+ {push_exe,      nothing_exe, "PUSH",      PUSH,      arg_asm},
+ {math_exe,      add_exe,     "ADD",       ADD,       nothing_asm},
+ {math_exe,      mod_exe,     "MOD",       MOD,       nothing_asm},
+ {math_exe,      sub_exe,     "SUB",       SUB,       nothing_asm},
+ {math_exe,      my_div_exe,  "DIV",       DIV,       nothing_asm},
+ {out_exe,       nothing_exe, "OUT",       OUT,       nothing_asm},
+ {math_exe,      mul_exe,     "MUL",       MUL,       nothing_asm},
+ {pow_exe,       nothing_exe, "POW",       POW,       arg_asm},
+ {my_sqrt_exe,   nothing_exe, "SQRT",      SQRT,      nothing_asm},
+ {reset_stk_exe, nothing_exe, "RESET_STK", RESET_STK, nothing_asm},
+ {pushreg_exe,   nothing_exe, "PUSHREG",   PUSHREG,   reg_asm},
+ {popreg_exe,    nothing_exe, "POPREG",    POPREG,    reg_asm},
+ {jmp_exe,       jb_exe,      "JB",        JB,        lbl_asm},
+ {jmp_exe,       jbe_exe,      "JBE",       JBE,       lbl_asm},
+ {jmp_exe,       ja_exe,      "JA",        JA,        lbl_asm},
+ {jmp_exe,       jae_exe,     "JAE",       JAE,       lbl_asm},
+ {jmp_exe,       je_exe,      "JE",        JE,        lbl_asm},
+ {jmp_exe,       jne_exe,     "JNE",       JNE,       lbl_asm},
+ {call_exe,      nothing_exe, "CALL",      CALL,      lbl_asm},
+ {ret_exe,       nothing_exe, "RET",       RET,       nothing_asm},
+ {in_exe,        nothing_exe, "IN",        IN,        nothing_asm},
+ {pushm_exe,     nothing_exe, "PUSHM",     PUSHM,     reg_asm},
+ {popm_exe,      nothing_exe, "POPM",      POPM,      reg_asm},
+ {draw_exe,      nothing_exe, "DRAW",      DRAW,      nothing_asm},
+ {hlt_exe,       nothing_exe, "HLT",       HLT,       nothing_asm},
+ {help_exe,      nothing_exe, "HELP",      HELP,      nothing_asm}
 };
 
 #endif // COMMANDS
