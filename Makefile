@@ -1,4 +1,4 @@
-DED_FLAGS = -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggressive-loop-optimizations -Wc++14-compat \
+DED_FLAGS =	-ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggressive-loop-optimizations -Wc++14-compat \
 		    -Wmissing-declarations -Wcast-align -Wcast-qual -Wchar-subscripts -Wconditionally-supported \
 		    -Wctor-dtor-privacy -Wempty-body -Wfloat-equal -Wformat-nonliteral -Wformat-security \
 		    -Wformat-signedness -Wformat=2 -Winline -Wnon-virtual-dtor -Wopenmp-simd -Woverloaded-virtual \
@@ -18,13 +18,16 @@ OBJECT_FILES = $(CPP_FILES:.cpp=.o)
 HEADER_FILES = $(wildcard *.h)
 
 # Исполняемые файлы
-all: soft_processor assambler
+all: soft_processor assambler converter
 
 soft_processor: SoftProcessor.o commands.o my_stack.o ReadFile.o
 	g++ $(DED_FLAGS) $(MODE) commands.o SoftProcessor.o my_stack.o ReadFile.o -o soft_processor
 
 assambler: assambler.o commands.o my_stack.o ReadFile.o
 	g++ $(DED_FLAGS) $(MODE) assambler.o commands.o my_stack.o ReadFile.o -o assambler
+
+converter: converter.o
+	g++ $(DED_FLAGS) $(MODE) converter.o -o converter
 
 # Объектные файлы
 assambler.o: assambler.cpp $(HEADER_FILES)
@@ -42,6 +45,11 @@ ReadFile.o: ReadFile.cpp $(HEADER_FILES)
 my_stack.o: my_stack.cpp $(HEADER_FILES)
 	g++ $(DED_FLAGS) $(MODE) -c my_stack.cpp -o my_stack.o
 
+converter.o: CONVERTER.cpp
+	g++ $(DED_FLAGS) $(MODE) -c CONVERTER.cpp -o converter.o
+
+
+# очистка
 clean:
 
 	rm *.o

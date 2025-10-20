@@ -1,14 +1,18 @@
+# Вывод квадратов каких-то там чисел
 IN
 POPREG AX
-PUSHREG AX
-PUSHREG AX
-MUL
-OUT
-PUSHREG AX
-PUSH 1
-ADD
-POPREG AX
-PUSHREG AX
-PUSH 10
-JB 9
+IN
+POPREG BX
+:7
+    PUSHREG AX
+    PUSHREG AX
+    MUL
+    OUT
+    PUSHREG AX
+    PUSH 1
+    ADD
+    POPREG AX
+    PUSHREG AX
+    PUSHREG BX
+    JBE :7
 HLT

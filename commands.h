@@ -19,6 +19,8 @@
 #include <cstdio>
 #include <unistd.h>
 #include <stdlib.h>
+#include <SFML/Graphics.hpp>
+
 #include "my_stack.h"
 #include "ReadFile.h"
 
@@ -33,7 +35,9 @@ const int COMMANDS_NUM = 26;
 const int REGS_NUM = 6;
 const int MAX_LABELS_NUM = 20;
 const int MAX_REG_LENGTH = 8;
-const int RAM_SIZE = 9213;
+const int DELAY_MS = 100;
+const int RAM_SIZE = 102 * 83 * 2;
+const int OX_SIZE = 102 * 2;
 
 typedef enum
 {
@@ -77,7 +81,7 @@ typedef enum
 } reg_t;
 
 
-struct translator_s
+typedef struct translator_s
 {
     size_t linenum;
     size_t count_line;
@@ -85,7 +89,7 @@ struct translator_s
     line* lines;
     int* codes;
     int labels[MAX_LABELS_NUM];
-};
+} translator_s;
 
 
 typedef struct SPU

@@ -7,6 +7,7 @@
 #include "commands.h"
 #include "ReadFile.h"
 #include "my_stack.h"
+#include <iostream>
 
 typedef enum
 {

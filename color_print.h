@@ -19,6 +19,7 @@
 
 // color of text
 
+#define  BLACK             "30"
 #define  RED               "31"
 #define  GREEN             "32"
 #define  ORANGE            "33"
