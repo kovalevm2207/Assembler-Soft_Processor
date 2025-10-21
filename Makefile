@@ -18,7 +18,7 @@ OBJECT_FILES = $(CPP_FILES:.cpp=.o)
 HEADER_FILES = $(wildcard *.h)
 
 # Исполняемые файлы
-all: soft_processor assambler converter
+all: soft_processor assambler converter hash_maker
 
 soft_processor: SoftProcessor.o commands.o my_stack.o ReadFile.o
 	g++ $(DED_FLAGS) $(MODE) commands.o SoftProcessor.o my_stack.o ReadFile.o -o soft_processor
@@ -28,6 +28,9 @@ assambler: assambler.o commands.o my_stack.o ReadFile.o
 
 converter: converter.o
 	g++ $(DED_FLAGS) $(MODE) converter.o -o converter
+
+hash_maker: hash_maker.o
+	g++ $(DED_FLAGS) $(MODE) hash_maker.o commands.o my_stack.o -o hash_maker
 
 # Объектные файлы
 assambler.o: assambler.cpp $(HEADER_FILES)
@@ -45,9 +48,11 @@ ReadFile.o: ReadFile.cpp $(HEADER_FILES)
 my_stack.o: my_stack.cpp $(HEADER_FILES)
 	g++ $(DED_FLAGS) $(MODE) -c my_stack.cpp -o my_stack.o
 
-converter.o: CONVERTER.cpp
+converter.o: CONVERTER.cpp $(HEADER_FILES)
 	g++ $(DED_FLAGS) $(MODE) -c CONVERTER.cpp -o converter.o
 
+hash_maker.o: hash_maker.cpp $(HEADER_FILES)
+	g++ $(DED_FLAGS) $(MODE) -c hash_maker.cpp -o hash_maker.o
 
 # очистка
 clean:

@@ -249,7 +249,7 @@ void draw_exe(SPU* spu, const command_s* command)
 {
     command->action_exe(0, 0);
 
-    system ("clear");
+    printf("\033[H");
     for (int i = 0; i < RAM_SIZE; i+=2) {
         if (spu->RAM[i] == 0) printf(CHANGE_ON BLACK TEXT_COLOR ". " RESET);
         else printf (CHANGE_ON "%d" TEXT_COLOR "%c " RESET, spu->RAM[i + 1], spu->RAM[i]);

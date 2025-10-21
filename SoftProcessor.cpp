@@ -32,7 +32,7 @@ ProcessorErr_t ProcessorDump(SPU* spu);
 
 int main(int argc, char* argv[])
 {
-    system("clear");
+//    system("clear");
     if (MainArgAnalyze(argc) != PROCESSOR_OK) return 1;
 
     SPU spu = {};
@@ -118,7 +118,6 @@ ProcessorErr_t ProcessorCtor(SPU* spu, int* code)
     else                        return (ProcessorErr_t) STATUS;
 }
 
-
 ProcessorErr_t check_heder(int* code)
 {
     assert(code != NULL);
@@ -133,7 +132,6 @@ ProcessorErr_t check_heder(int* code)
     return (ProcessorErr_t) sign_err;
 }
 
-
 ProcessorErr_t check_commands_num(const command_s* arr_struct)
 {
     int STATUS = PROCESSOR_OK;
@@ -142,7 +140,7 @@ ProcessorErr_t check_commands_num(const command_s* arr_struct)
             printf(CHANGE_ON RED TEXT_COLOR "!!!ERROR!!! номера команд не соответствуют их позиции в массиве структур\n" RESET
                                             "Ошибка произошла в команде %s\n"
                    CHANGE_ON RED TEXT_COLOR "Сейчас:      номер команды %d        позиция в массиве структур %d\n" RESET
-                   CHANGE_ON GREEN TEXT_COLOR "Должно быть: номер команды %d        позиция в массиве структур %d\n" RESET,
+                 CHANGE_ON GREEN TEXT_COLOR "Должно быть: номер команды %d        позиция в массиве структур %d\n" RESET,
                                             arr_struct[i].name, arr_struct[i].num, i, arr_struct[i].num, arr_struct[i].num);
             STATUS = COMMANDS_NUM_ERR;
         }
@@ -151,6 +149,32 @@ ProcessorErr_t check_commands_num(const command_s* arr_struct)
 }
 
 
+ProcessorErr_t ProcessorExe(SPU* spu)
+{
+    assert(spu != NULL);
+
+    int* code = spu->code;
+    size_t* PC = &spu->PC;
+    int current_command = -1;
+
+    while (code[*PC] != EOF) {
+        current_command = code[*PC];
+        assert(current_command > -1);
+        assert(current_command < COMMANDS_NUM);
+
+        commands[current_command].func_exe(spu, &commands[current_command]); // так как в массиве структур номер команды совпадает
+                                                                             // с номером ее ячейки в массиве
+        if (current_command == HLT) return PROCESSOR_OK;
+
+        (*PC)++;
+
+        #ifdef DUMP
+            ProcessorDump(spu);
+            getchar();
+        #endif
+    }
+    return PROGRAM_END_MISSING;
+}
 
 
 ProcessorErr_t ProcessorDtor(SPU* spu)
@@ -201,32 +225,4 @@ ProcessorErr_t ProcessorDump(SPU* spu)
     printf("\n" CHANGE_ON PURPLE TEXT_COLOR "       SIGNATURE    " CHANGE_ON YELLOW TEXT_COLOR  "        VERSION\n" RESET);
     printf("regs:   AX = [%d], BX = [%d], CX = [%d], DX = [%d], SX[%d]\n", spu->regs[0], spu->regs[1], spu->regs[2], spu->regs[3], spu->regs[4]);
     return PROCESSOR_OK;
-}
-
-
-ProcessorErr_t ProcessorExe(SPU* spu)
-{
-    assert(spu != NULL);
-
-    int* code = spu->code;
-    size_t* PC = &spu->PC;
-    int current_command = -1;
-
-    while (code[*PC] != EOF) {
-        current_command = code[*PC];
-        assert(current_command > -1);
-        assert(current_command < COMMANDS_NUM);
-
-        commands[current_command].func_exe(spu, &commands[current_command]); // так как в массиве структур номер команды совпадает
-                                                                             // с номером ее ячейки в массиве
-        if (current_command == HLT) return PROCESSOR_OK;
-
-        (*PC)++;
-
-        #ifdef DUMP
-            ProcessorDump(spu);
-            getchar();
-        #endif
-    }
-    return PROGRAM_END_MISSING;
 }

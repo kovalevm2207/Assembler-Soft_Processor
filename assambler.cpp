@@ -9,24 +9,28 @@
 #include "ReadFile.h"
 #include "my_stack.h"
 
-const int MAX_COMMAND_LENGTH = 100;
-
 typedef enum
 {
-    ASSEMBLER_OK        = 1 << 1,
-    NULL_TRANSLATOR_PTR = 1 << 2,
-    MAIN_ARG_NUM_ERR    = 1 << 3,
-    NULL_TEXT_PTR       = 1 << 4,
-    NULL_CODE_PTR       = 1 << 5
+    ASSEMBLER_OK         = 1 << 1,
+    NULL_TRANSLATOR_PTR  = 1 << 2,
+    MAIN_ARG_NUM_ERR     = 1 << 3,
+    NULL_TEXT_PTR        = 1 << 4,
+    NULL_CODE_PTR        = 1 << 5,
+    COUNT_LINES_ERR      = 1 << 6,
+    INVALID_COMMAND_ERR  = 1 << 7,
+    DIFFERENT_HASHES_ERR = 1 << 8,
+    MEM_ALLOC_ERR        = 1 << 9
 } AssemblerErr_t;
 
 
 AssemblerErr_t MainArgAnalyze(int argc);
 char* ReadProgram(char* argv);
 AssemblerErr_t AssamblerCtor(translator_s* translator, char* command_text);
+AssemblerErr_t check_hashs(void);
 AssemblerErr_t AssamblerExe(translator_s* translator);
 AssemblerErr_t AssamblerDtor(translator_s* translator);
 AssemblerErr_t create_signature(int* code);
+long int hashing(char* command);
 int label_asm(translator_s* translator);
 void print_result_code(translator_s* translator);
 int write_result_in_text_file(translator_s* translator, char* argv);
@@ -92,17 +96,21 @@ AssemblerErr_t AssamblerCtor(translator_s* translator, char* command_text)
     if (translator == NULL) return NULL_TRANSLATOR_PTR;
     if (command_text == NULL) return NULL_TEXT_PTR;
 
+    int STATUS = ASSEMBLER_OK;
+    STATUS = check_hashs();
+
     size_t linenum = count_lines(command_text);
-    assert(linenum > 0);
+    if (linenum <= 0) {STATUS = COUNT_LINES_ERR; return (AssemblerErr_t) STATUS;}
 
     line *command_lines = (line*) calloc(linenum, sizeof(line));
-    assert(command_lines != 0);
+    if(command_lines == NULL) {STATUS = MEM_ALLOC_ERR; return (AssemblerErr_t) STATUS;}
+
     get_lines(command_lines, command_text);
 
     free(command_text); command_text = NULL;
 
     int* command_codes = (int*) calloc(linenum * 2 + 1 /*SIGNATURE*/ + 1 /*version*/, sizeof(int));
-    assert(command_codes != NULL);
+    if(command_lines == NULL) {STATUS = MEM_ALLOC_ERR; return (AssemblerErr_t) STATUS;}
 
     translator->linenum = linenum;
     translator->count_line = 0;
@@ -113,7 +121,29 @@ AssemblerErr_t AssamblerCtor(translator_s* translator, char* command_text)
         translator->labels[i] = 0;
     }
 
-    return ASSEMBLER_OK;
+    return (AssemblerErr_t) STATUS;
+}
+
+
+AssemblerErr_t check_hashs(void)
+{
+    int STATUS = ASSEMBLER_OK;
+    for (int i = 0; i < COMMANDS_NUM; i++)
+    {
+        long int hash = 0;
+        int letter = 0;
+        while(commands[i].name[letter] != '\0') {
+            hash = hash * 31 + commands[i].name[letter++];
+        }
+        if (hash != commands[i].hash) {
+            printf(CHANGE_ON RED TEXT_COLOR "!!!ERROR!!! Different hashs for the command %s\n"
+                                            "You have            hash = %ld\n"
+                                            "but must have       hash = %ld\n" RESET,
+                                            commands[i].name, commands[i].hash, hash);
+            STATUS = DIFFERENT_HASHES_ERR;
+        }
+    }
+    return (AssemblerErr_t) STATUS;
 }
 
 
@@ -150,14 +180,42 @@ AssemblerErr_t AssamblerExe(translator_s* translator)
 {
     assert(translator != NULL);
 
+    const int FIND  = 1;
+    const int NFIND = 0;
+
     char command[MAX_COMMAND_LENGTH] = {};
 
     int* count = &(translator->code_num);
     int* codes = translator->codes;
 
     for (; translator->count_line < translator->linenum; translator->count_line++) {
-
         sscanf(translator->lines[translator->count_line].ptr, "%s", command);
+
+        long int com_hash = hashing(command);
+        int find_stat = NFIND;
+
+        for (int i = 0; i <= COMMANDS_NUM; i++) {
+            if (i == COMMANDS_NUM) {
+                label_asm(translator);
+                find_stat = FIND;
+                break;
+            }
+            else if (commands[i].hash == com_hash) {
+                codes[(*count)++] = commands[i].num;
+                #ifdef DUMP
+                    printf("%3d %s  ", *count, command); getchar();
+                #endif
+                commands[i].func_asm(translator);
+                memset(command, 0, sizeof(command));
+                find_stat = FIND;
+                break;
+            }
+        }
+        if (find_stat == NFIND) return INVALID_COMMAND_ERR;
+    }
+    return ASSEMBLER_OK;
+}
+        /*
         for (int i = 0; i <= COMMANDS_NUM; i++) {
             if (i == COMMANDS_NUM) {
                 label_asm(translator);
@@ -172,10 +230,19 @@ AssemblerErr_t AssamblerExe(translator_s* translator)
                 memset(command, 0, sizeof(command));
                 break;
             }
-        }
+        }*/
+
+
+long int hashing(char* command)
+{
+    long int hash = 0;
+    long int i = 0;
+    while(command[i] != '\0') {
+        hash = hash * 31 + command[i++];
     }
-    return ASSEMBLER_OK;
+    return hash;
 }
+
 
 int label_asm(translator_s* translator)
 {
