@@ -81,14 +81,14 @@ int main(int argc, char* argv[])
 
                 printf("%c ", sym);
 
-                fprintf(file_out, "PUSH %d        # номер символа %c\n", sym, sym );
-                fprintf(file_out, "POPM [BX]\n"
-                                  "\n"
-                                  "PUSHREG BX\n"
-                                  "PUSH 2\n"
-                                  "ADD            # увелчиваем счетчик\n"
-                                  "POPREG BX\n"
-                                  "\n");
+                fprintf(file_out, " PUSH %d        # номер символа %c\n", sym, sym );
+                fprintf(file_out, " POPM [BX]\n"
+                                  " \n"
+                                  " PUSHREG BX\n"
+                                  " PUSH 2\n"
+                                  " ADD            # увелчиваем счетчик\n"
+                                  " POPREG BX\n"
+                                  " \n");
             }
         }
         else {
@@ -96,15 +96,14 @@ int main(int argc, char* argv[])
 
             printf("%c ", sym);
 
-            fprintf(file_out, "PUSH %d        # %c\n", sym, sym );
-            fprintf(file_out, "POPM [BX]\n"
-                              "\n"
-                              "PUSHREG BX\n"
-                              "PUSH 2\n"
-                              "ADD            # увелчиваем счетчик\n"
-                              "POPREG BX\n"
-                              "\n");
-            //    fprintf(file_out, ""); // Кладем символ в память
+            fprintf(file_out, " PUSH %d        # %c\n", sym, sym );
+            fprintf(file_out, " POPM [BX]\n"
+                              " \n"
+                              " PUSHREG BX\n"
+                              " PUSH 2\n"
+                              " ADD            # увелчиваем счетчик\n"
+                              " POPREG BX\n"
+                              " \n");
         }
         sym = fgetc(file_in);
     }

@@ -9,7 +9,7 @@
 #include "ReadFile.h"
 #include "my_stack.h"
 
-const int MAX_COMMAND_LENGTH = 20;
+const int MAX_COMMAND_LENGTH = 100;
 
 typedef enum
 {
