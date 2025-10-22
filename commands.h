@@ -33,13 +33,14 @@ const int MAX_COMMAND_LENGTH = 10;
 const int MAX_LABELS_NUM = 20;
 const int MAX_REG_LENGTH = 8;
 
+const int PRECISION = 100;
 const size_t CAPACITY = 20;
 const int COMMANDS_NUM = 26;
 const int REGS_NUM = 6;
 
-const int DELAY_MS = 100;
-const int OX_SIZE = 165 * 2;  // для кружочка 111
-const int RAM_SIZE = 165 * 92 * 2;
+const int DELAY_MS = 33;
+const int OX_SIZE = 50 * 2;  // для кружочка 111
+const int RAM_SIZE = 50 * 92 * 2;
 
 typedef enum
 {
@@ -135,7 +136,6 @@ int lbl_asm(translator_s* translator);
 //-------------------------------------------------------------//
 
 //-----------------------------------------------------------PUSH
-int nothing_exe(int a, int b);
 void push_exe(SPU* spu, const command_s* commands);
 void pushreg_exe(SPU* spu, const command_s* command);
 void pushm_exe(SPU* spu, const command_s* command);
@@ -179,32 +179,32 @@ void help_exe(SPU* spu, const command_s* command);
 //-------------------------------------------------------------//
 const command_s commands[COMMANDS_NUM] =
 {
- {push_exe,      nothing_exe, "PUSH",      PUSH,      2467610,        arg_asm},
+ {push_exe,      NULL,        "PUSH",      PUSH,      2467610,        arg_asm},
  {math_exe,      add_exe,     "ADD",       ADD,       64641,          nothing_asm},
  {math_exe,      mod_exe,     "MOD",       MOD,       76514,          nothing_asm},
  {math_exe,      sub_exe,     "SUB",       SUB,       82464,          nothing_asm},
  {math_exe,      my_div_exe,  "DIV",       DIV,       67697,          nothing_asm},
- {out_exe,       nothing_exe, "OUT",       OUT,       78638,          nothing_asm},
+ {out_exe,       NULL,        "OUT",       OUT,       78638,          nothing_asm},
  {math_exe,      mul_exe,     "MUL",       MUL,       76708,          nothing_asm},
- {pow_exe,       nothing_exe, "POW",       POW,       79416,          arg_asm},
- {my_sqrt_exe,   nothing_exe, "SQRT",      SQRT,      2553120,        nothing_asm},
- {reset_stk_exe, nothing_exe, "RESET_STK", RESET_STK, 71911154149114, nothing_asm},
- {pushreg_exe,   nothing_exe, "PUSHREG",   PUSHREG,   73512650522,    reg_asm},
- {popreg_exe,    nothing_exe, "POPREG",    POPREG,    2365754531,     reg_asm},
+ {pow_exe,       NULL,        "POW",       POW,       79416,          arg_asm},
+ {my_sqrt_exe,   NULL,        "SQRT",      SQRT,      2553120,        nothing_asm},
+ {reset_stk_exe, NULL,        "RESET_STK", RESET_STK, 71911154149114, nothing_asm},
+ {pushreg_exe,   NULL,        "PUSHREG",   PUSHREG,   73512650522,    reg_asm},
+ {popreg_exe,    NULL,        "POPREG",    POPREG,    2365754531,     reg_asm},
  {jmp_exe,       jb_exe,      "JB",        JB,        2360,           lbl_asm},
  {jmp_exe,       jbe_exe,      "JBE",       JBE,      73229,          lbl_asm},
  {jmp_exe,       ja_exe,      "JA",        JA,        2359,           lbl_asm},
  {jmp_exe,       jae_exe,     "JAE",       JAE,       73198,          lbl_asm},
  {jmp_exe,       je_exe,      "JE",        JE,        2363,           lbl_asm},
  {jmp_exe,       jne_exe,     "JNE",       JNE,       73601,          lbl_asm},
- {call_exe,      nothing_exe, "CALL",      CALL,      2060894,        lbl_asm},
- {ret_exe,       nothing_exe, "RET",       RET,       81025,          nothing_asm},
- {in_exe,        nothing_exe, "IN",        IN,        2341,           nothing_asm},
- {pushm_exe,     nothing_exe, "PUSHM",     PUSHM,     76495987,       reg_asm},
- {popm_exe,      nothing_exe, "POPM",      POPM,      2461756,        reg_asm},
- {draw_exe,      nothing_exe, "DRAW",      DRAW,      2106692,        nothing_asm},
- {hlt_exe,       nothing_exe, "HLT",       HLT,       71632,          nothing_asm},
- {help_exe,      nothing_exe, "HELP",      HELP,      2213697,        nothing_asm}
+ {call_exe,      NULL,        "CALL",      CALL,      2060894,        lbl_asm},
+ {ret_exe,       NULL,        "RET",       RET,       81025,          nothing_asm},
+ {in_exe,        NULL,        "IN",        IN,        2341,           nothing_asm},
+ {pushm_exe,     NULL,        "PUSHM",     PUSHM,     76495987,       reg_asm},
+ {popm_exe,      NULL,        "POPM",      POPM,      2461756,        reg_asm},
+ {draw_exe,      NULL,        "DRAW",      DRAW,      2106692,        nothing_asm},
+ {hlt_exe,       NULL,        "HLT",       HLT,       71632,          nothing_asm},
+ {help_exe,      NULL,        "HELP",      HELP,      2213697,        nothing_asm}
 };
 
 #endif // COMMANDS

@@ -17,7 +17,7 @@ CPP_FILES = $(wildcard *.cpp)
 OBJECT_FILES = $(CPP_FILES:.cpp=.o)
 HEADER_FILES = $(wildcard *.h)
 
-# Исполняемые файлы
+# Исполняемые фалы
 all: soft_processor assambler converter hash_maker
 
 soft_processor: SoftProcessor.o commands.o my_stack.o ReadFile.o

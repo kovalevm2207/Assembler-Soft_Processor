@@ -9,6 +9,7 @@
 #include "ReadFile.h"
 #include "my_stack.h"
 #include <iostream>
+#include <SDL2/SDL.h>
 
 typedef enum
 {
@@ -32,7 +33,88 @@ ProcessorErr_t ProcessorDump(SPU* spu);
 
 int main(int argc, char* argv[])
 {
-//    system("clear");
+    system("clear");
+
+
+    /*if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("Ошибка инициализации SDL: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    // Создание окна
+    SDL_Window* window = SDL_CreateWindow(
+        "Мое первое SDL2 окно",          // заголовок
+        SDL_WINDOWPOS_CENTERED,          // позиция X
+        SDL_WINDOWPOS_CENTERED,          // позиция Y
+        800,                             // ширина
+        600,                             // высота
+        SDL_WINDOW_SHOWN                 // флаги
+    );
+
+    // Проверка на ошибки создания окна
+    if (window == NULL) {
+        printf("Ошибка создания окна: %s\n", SDL_GetError());
+        SDL_Quit();
+        return 1;
+    }
+
+    // Создание рендерера
+    SDL_Renderer* renderer = SDL_CreateRenderer(
+        window,
+        -1,
+        SDL_RENDERER_ACCELERATED
+    );
+
+    if (renderer == NULL) {
+        printf("Ошибка создания рендерера: %s\n", SDL_GetError());
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
+    // Основной цикл
+    int running = 1;
+    SDL_Event event;
+
+    while (running) {
+        // Обработка событий
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
+                running = 0;
+            }
+            if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_ESCAPE) {
+                    running = 0;
+                }
+            }
+        }
+
+        // Очистка экрана (черный цвет)
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+
+        // Можно добавить рисование здесь
+        // Например, нарисуем красный прямоугольник
+        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+        SDL_Rect rect = {100, 100, 200, 150};
+        SDL_RenderFillRect(renderer, &rect);
+
+        // Обновление экрана
+        SDL_RenderPresent(renderer);
+
+        // Небольшая задержка для снижения нагрузки на CPU
+        SDL_Delay(16); // ~60 FPS
+    }
+
+    // Освобождение ресурсов
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();*/
+
+
+
+
+
     if (MainArgAnalyze(argc) != PROCESSOR_OK) return 1;
 
     SPU spu = {};

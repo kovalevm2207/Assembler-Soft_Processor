@@ -94,18 +94,17 @@ int lbl_asm(translator_s* translator)
 //-------------------------------------------------------------//
 
 //-----------------------------------------------------------PUSH
-int nothing_exe(int a, int b) {(void)a; (void)b; return 0;}
-
 void push_exe(SPU* spu, const command_s* command)
 {
-    command->action_exe(0, 0);
+    (void) command;
+
     stack_t data = spu->code[++(spu->PC)];
     StackPush(&spu->stk, data);
 }
 
 void pushreg_exe(SPU* spu, const command_s* command)
 {
-    command->action_exe(0, 0);
+    (void) command;
 
     reg_t reg = (reg_t) spu->code[++(spu->PC)];
     StackPush(&spu->stk, spu->regs[reg]);
@@ -113,7 +112,7 @@ void pushreg_exe(SPU* spu, const command_s* command)
 
 void pushm_exe(SPU* spu, const command_s* command)
 {
-    command->action_exe(0, 0);
+    (void) command;
 
     int mem_i = spu->code[++(spu->PC)];
     StackPush(&spu->stk, spu->RAM[mem_i]);
@@ -122,7 +121,7 @@ void pushm_exe(SPU* spu, const command_s* command)
 //-----------------------------------------------------------POP
 void popreg_exe(SPU* spu, const command_s* command)
 {
-    command->action_exe(0, 0);
+    (void) command;
 
     reg_t reg = (reg_t) spu->code[++(spu->PC)];
     StackPop(&spu->stk, &spu->regs[reg]);
@@ -130,7 +129,7 @@ void popreg_exe(SPU* spu, const command_s* command)
 
 void popm_exe(SPU* spu, const command_s* command)
 {
-    command->action_exe(0, 0);
+    (void) command;
 
     stack_t data = 0;
     StackPop(&spu->stk, &data);
@@ -151,13 +150,13 @@ void math_exe(SPU* spu, const command_s* command)
     StackPop(&spu->stk, &a);
     StackPop(&spu->stk, &b);
 
-    stack_t c = command->action_exe(a, b);
+    stack_t c = command->action_exe(a, b); //add;sub;mod;div;mul
     StackPush(&spu->stk, c);
 }
 
 void pow_exe(SPU* spu, const command_s* command)
 {
-    command->action_exe(0, 0);
+    (void) command;
 
     stack_t a = 0, n = spu->code[++(spu->PC)];
     StackPop(&spu->stk, &a);
@@ -168,7 +167,7 @@ void pow_exe(SPU* spu, const command_s* command)
 
 void my_sqrt_exe(SPU* spu, const command_s* command)
 {
-    command->action_exe(0, 0);
+    (void) command;
 
     stack_t a = 0;
     StackPop(&spu->stk, &a);
@@ -191,7 +190,7 @@ void jmp_exe(SPU* spu, const command_s* command)
     StackPop(&spu->stk, &b);
     StackPop(&spu->stk, &a);
 
-    if (command->action_exe(a, b)) {
+    if (command->action_exe(a, b)) { // jb;jbe;ja;jae;je;jne
         int new_pc = spu->code[++(spu->PC)];
         spu->PC = new_pc - 1;
     } else (spu->PC)++;
@@ -199,7 +198,7 @@ void jmp_exe(SPU* spu, const command_s* command)
 
 void call_exe(SPU* spu, const command_s* command)
 {
-    command->action_exe(0, 0);
+    (void) command;
 
     StackPush(&spu->labels, spu->PC);
     int new_pc = spu->code[++(spu->PC)];
@@ -208,7 +207,7 @@ void call_exe(SPU* spu, const command_s* command)
 
 void ret_exe(SPU* spu, const command_s* command)
 {
-    command->action_exe(0, 0);
+    (void) command;
 
     stack_t new_pc = 0;
     StackPop(&spu->labels, &new_pc);
@@ -218,7 +217,7 @@ void ret_exe(SPU* spu, const command_s* command)
 //------------------------------------------------------------SYSTEM
 void out_exe(SPU* spu, const command_s* command)
 {
-    command->action_exe(0, 0);
+    (void) command;
 
     stack_t data = 0;
     StackPop(&spu->stk, &data);
@@ -228,7 +227,7 @@ void out_exe(SPU* spu, const command_s* command)
 
 void reset_stk_exe(SPU* spu, const command_s* command)
 {
-    command->action_exe(0, 0);
+    (void) command;
 
     StackDtor(&spu->stk);
     StackCtor(&spu->stk, CAPACITY);
@@ -236,7 +235,7 @@ void reset_stk_exe(SPU* spu, const command_s* command)
 
 void in_exe(SPU* spu, const command_s* command)
 {
-    command->action_exe(0, 0);
+    (void) command;
 
     int a = 0;
     printf("Write integer: ");
@@ -247,7 +246,7 @@ void in_exe(SPU* spu, const command_s* command)
 
 void draw_exe(SPU* spu, const command_s* command)
 {
-    command->action_exe(0, 0);
+    (void) command;
 
     printf("\033[H");
     for (int i = 0; i < RAM_SIZE; i+=2) {
@@ -261,7 +260,7 @@ void draw_exe(SPU* spu, const command_s* command)
 
 void hlt_exe(SPU* spu, const command_s* command)
 {
-    command->action_exe(0, 0);
+    (void) command;
     (void)spu;
 
     printf("You end the program\n");
@@ -270,6 +269,7 @@ void help_exe(SPU* spu, const command_s* command)
 {
     (void) spu;
     (void) command;
+
     printf("\nusage: main_calc " CHANGE_ON BLUE TEXT_COLOR "[HELP] [HLT] [PUSH] [OUT]\n"
            "                 [SUB] [DIV] [MUL] [POW] [SQRT]\n"
            "                 [RESET_STK] [PUSHREG] [POPREG]\n"
