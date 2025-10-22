@@ -31,7 +31,6 @@ AssemblerErr_t AssamblerExe(translator_s* translator);
 AssemblerErr_t AssamblerDtor(translator_s* translator);
 AssemblerErr_t create_signature(int* code);
 long int hashing(char* command);
-int label_asm(translator_s* translator);
 void print_result_code(translator_s* translator);
 int write_result_in_text_file(translator_s* translator, char* argv);
 char* create_name(char* argv);
@@ -43,14 +42,14 @@ int main(int argc, char* argv[])
     if(command_text == NULL) return 1;
 
     translator_s translator = {};
-    if (AssamblerCtor(&translator, command_text) != ASSEMBLER_OK) return 1;
+    if (AssamblerCtor(&translator, command_text) != ASSEMBLER_OK) {AssamblerDtor(&translator); return 1;}
 
-    AssamblerExe(&translator);
+    if(AssamblerExe(&translator) != ASSEMBLER_OK) {AssamblerDtor(&translator); return 1;}
     translator.count_line = 0;
     translator.code_num = 2;
     AssamblerExe(&translator);
 
-    if (create_signature(translator.codes) != ASSEMBLER_OK) return 1;
+    if (create_signature(translator.codes) != ASSEMBLER_OK) {AssamblerDtor(&translator); return 1;}
     write_result_in_text_file(&translator, argv[1]);
 
     AssamblerDtor(&translator);
@@ -110,7 +109,7 @@ AssemblerErr_t AssamblerCtor(translator_s* translator, char* command_text)
     free(command_text); command_text = NULL;
 
     int* command_codes = (int*) calloc(linenum * 2 + 1 /*SIGNATURE*/ + 1 /*version*/, sizeof(int));
-    if(command_lines == NULL) {STATUS = MEM_ALLOC_ERR; return (AssemblerErr_t) STATUS;}
+    if(command_codes == NULL) {free(command_lines); STATUS = MEM_ALLOC_ERR; return (AssemblerErr_t) STATUS;}
 
     translator->linenum = linenum;
     translator->count_line = 0;
@@ -180,9 +179,6 @@ AssemblerErr_t AssamblerExe(translator_s* translator)
 {
     assert(translator != NULL);
 
-    const int FIND  = 1;
-    const int NFIND = 0;
-
     char command[MAX_COMMAND_LENGTH] = {};
 
     int* count = &(translator->code_num);
@@ -192,12 +188,10 @@ AssemblerErr_t AssamblerExe(translator_s* translator)
         sscanf(translator->lines[translator->count_line].ptr, "%s", command);
 
         long int com_hash = hashing(command);
-        int find_stat = NFIND;
 
         for (int i = 0; i <= COMMANDS_NUM; i++) {
             if (i == COMMANDS_NUM) {
-                label_asm(translator);
-                find_stat = FIND;
+                if (lbl_asm(translator)) return INVALID_COMMAND_ERR;
                 break;
             }
             else if (commands[i].hash == com_hash) {
@@ -207,30 +201,12 @@ AssemblerErr_t AssamblerExe(translator_s* translator)
                 #endif
                 commands[i].func_asm(translator);
                 memset(command, 0, sizeof(command));
-                find_stat = FIND;
                 break;
             }
         }
-        if (find_stat == NFIND) return INVALID_COMMAND_ERR;
     }
     return ASSEMBLER_OK;
 }
-        /*
-        for (int i = 0; i <= COMMANDS_NUM; i++) {
-            if (i == COMMANDS_NUM) {
-                label_asm(translator);
-                break;
-            }
-            else if (strcmp(command, commands[i].name) == 0) {
-                codes[(*count)++] = commands[i].num;
-                #ifdef DUMP
-                    printf("%3d %s  ", *count, command); getchar();
-                #endif
-                commands[i].func_asm(translator);
-                memset(command, 0, sizeof(command));
-                break;
-            }
-        }*/
 
 
 long int hashing(char* command)
@@ -241,20 +217,6 @@ long int hashing(char* command)
         hash = hash * 31 + command[i++];
     }
     return hash;
-}
-
-
-int label_asm(translator_s* translator)
-{
-    int label = 0;
-    if (sscanf(translator->lines[translator->count_line].ptr, " :%d", &label) == 1) {
-        translator->labels[label] = translator->code_num;
-        #ifdef DUMP
-            printf(":%d or count = %d\n", label, translator->code_num);
-        #endif
-        return 0;
-    }
-    else return 1;
 }
 
 

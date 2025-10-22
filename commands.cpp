@@ -42,7 +42,7 @@ int reg_asm(translator_s* translator)
     if (sscanf(translator->lines[translator->count_line].ptr, "%*s [%[^]]", reg) != 1) {
         if (sscanf(translator->lines[translator->count_line].ptr,"%*s %s", reg) != 1) {
             printf(CHANGE_ON RED TEXT_COLOR "Missing reg for a function that must have an reg\n" RESET);
-            //do_help();
+            // help_exe();
             return 1/*NOTFOUND_REG*/;
         }
     } else {
@@ -51,6 +51,11 @@ int reg_asm(translator_s* translator)
             MODE = MEM_I
         #endif
         ;
+    }
+    if (reg[1] != 'X' || reg[2] != '\0') {
+        printf(CHANGE_ON RED TEXT_COLOR "INvalid reg for a function\n" RESET);
+        //do_help();
+        return 1/*INVALID_REG*/;
     }
 
     for(int i = 0; i < REGS_NUM; i++) {
@@ -72,7 +77,7 @@ int reg_asm(translator_s* translator)
 int lbl_asm(translator_s* translator)
 {
     int label = 0;
-    sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label);
+    if (sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label) != 1) return 1;
     #ifdef DUMP
         printf(":%d or %d", label, translator->labels[label]); getchar();
         getchar();
