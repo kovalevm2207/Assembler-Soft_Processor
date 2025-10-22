@@ -39,8 +39,8 @@ const int COMMANDS_NUM = 26;
 const int REGS_NUM = 6;
 
 const int DELAY_MS = 33;
-const int OX_SIZE = 50 * 2;  // для кружочка 111
-const int RAM_SIZE = 50 * 92 * 2;
+const int OX_SIZE = 111 * 2;  // для кружочка 111
+const int RAM_SIZE = 111 * 92 * 2;
 
 typedef enum
 {

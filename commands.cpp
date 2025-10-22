@@ -61,6 +61,7 @@ int reg_asm(translator_s* translator)
     for(int i = 0; i < REGS_NUM; i++) {
         if(reg[0] == 'A' + i) {
             translator->codes[(translator->code_num)++] = i;
+            return 0;/*ASSEMBLER_OK*/
         }
     }
 
@@ -70,19 +71,24 @@ int reg_asm(translator_s* translator)
         getchar();
     #endif
 
-    return 0/*ASSEMBLER_OK*/;
+    printf(CHANGE_ON RED TEXT_COLOR "INVALID REG FOR THE FUNCTION\n" RESET);
+    return 1;/*NOTFOUND_REG*/
 }
 //---------------------------------------------------------------REG
 //---------------------------------------------------------------LBL
 int lbl_asm(translator_s* translator)
 {
     int label = 0;
-    if (sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label) != 1) return 1;
+    if (sscanf(translator->lines[translator->count_line].ptr, " :%d", &label) != 1) {
+        if (sscanf(translator->lines[translator->count_line].ptr, "%*s :%d", &label) != 1) return 1;
+        translator->codes[(translator->code_num)++] = translator->labels[label];
+        return 0;
+    }
     #ifdef DUMP
         printf(":%d or %d", label, translator->labels[label]); getchar();
         getchar();
     #endif
-    translator->codes[(translator->code_num)++] = translator->labels[label];
+    translator->labels[label] = translator->code_num;
 
     return 0/*ASSEMBLER_OK*/;
 }

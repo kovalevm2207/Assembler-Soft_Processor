@@ -25,15 +25,19 @@ typedef enum
 
 AssemblerErr_t MainArgAnalyze(int argc);
 char* ReadProgram(char* argv);
+
 AssemblerErr_t AssamblerCtor(translator_s* translator, char* command_text);
 AssemblerErr_t check_hashs(void);
+
 AssemblerErr_t AssamblerExe(translator_s* translator);
-AssemblerErr_t AssamblerDtor(translator_s* translator);
-AssemblerErr_t create_signature(int* code);
 long int hashing(char* command);
-void print_result_code(translator_s* translator);
+
 int write_result_in_text_file(translator_s* translator, char* argv);
+AssemblerErr_t create_signature(int* code);
 char* create_name(char* argv);
+void print_result_code(translator_s* translator);
+
+AssemblerErr_t AssamblerDtor(translator_s* translator);
 
 int main(int argc, char* argv[])
 {
@@ -49,7 +53,6 @@ int main(int argc, char* argv[])
     translator.code_num = 2;
     AssamblerExe(&translator);
 
-    if (create_signature(translator.codes) != ASSEMBLER_OK) {AssamblerDtor(&translator); return 1;}
     write_result_in_text_file(&translator, argv[1]);
 
     AssamblerDtor(&translator);
@@ -146,35 +149,6 @@ AssemblerErr_t check_hashs(void)
 }
 
 
-AssemblerErr_t AssamblerDtor(translator_s* translator)
-{
-    if (translator == NULL) return NULL_TRANSLATOR_PTR;
-
-    free(translator->lines); translator->lines = NULL;
-    free(translator->codes); translator->codes = NULL;
-
-    translator->linenum = 0;
-    translator->count_line = 0;
-    translator->code_num = 2;
-    translator->lines = NULL;
-    translator->codes = NULL;
-    for (int i = 0; i < MAX_LABELS_NUM; i++) {
-        translator->labels[i] = 0;
-    }
-
-    return ASSEMBLER_OK;
-}
-
-
-AssemblerErr_t create_signature(int* code)
-{
-    if (code == NULL) return NULL_CODE_PTR;
-    memcpy(code, heder::SIGNATURE, 4);
-    code[1] = heder::VERSION;
-    return ASSEMBLER_OK;
-}
-
-
 AssemblerErr_t AssamblerExe(translator_s* translator)
 {
     assert(translator != NULL);
@@ -191,7 +165,11 @@ AssemblerErr_t AssamblerExe(translator_s* translator)
 
         for (int i = 0; i <= COMMANDS_NUM; i++) {
             if (i == COMMANDS_NUM) {
-                if (lbl_asm(translator)) return INVALID_COMMAND_ERR;
+                if (lbl_asm(translator))
+                {
+                    printf(CHANGE_ON RED TEXT_COLOR "!!!ERROR!!! INVALID COMMAND ERR\n" RESET);
+                    return INVALID_COMMAND_ERR;
+                }
                 break;
             }
             else if (commands[i].hash == com_hash) {
@@ -199,7 +177,7 @@ AssemblerErr_t AssamblerExe(translator_s* translator)
                 #ifdef DUMP
                     printf("%3d %s  ", *count, command); getchar();
                 #endif
-                commands[i].func_asm(translator);
+                if(commands[i].func_asm(translator)) return INVALID_COMMAND_ERR;
                 memset(command, 0, sizeof(command));
                 break;
             }
@@ -222,6 +200,8 @@ long int hashing(char* command)
 
 int write_result_in_text_file(translator_s* translator, char* argv)
 {
+    create_signature(translator->codes);
+
     translator->codes[translator->code_num++] = '\0';
     #ifdef DUMP
         print_result_code(translator);
@@ -240,6 +220,23 @@ int write_result_in_text_file(translator_s* translator, char* argv)
 }
 
 
+AssemblerErr_t create_signature(int* code)
+{
+    if (code == NULL) return NULL_CODE_PTR;
+    memcpy(code, heder::SIGNATURE, 4);
+    code[1] = heder::VERSION;
+    return ASSEMBLER_OK;
+}
+
+
+char* create_name(char* argv)
+{
+    char* dot_pos = strchr(argv, '.');
+    *(dot_pos + 1) = '\0';
+    return strcat(argv, "bin");
+}
+
+
 void print_result_code(translator_s* translator)
 {
     printf("Result codes: ");
@@ -250,9 +247,21 @@ void print_result_code(translator_s* translator)
 }
 
 
-char* create_name(char* argv)
+AssemblerErr_t AssamblerDtor(translator_s* translator)
 {
-    char* dot_pos = strchr(argv, '.');
-    *(dot_pos + 1) = '\0';
-    return strcat(argv, "bin");
+    if (translator == NULL) return NULL_TRANSLATOR_PTR;
+
+    free(translator->lines); translator->lines = NULL;
+    free(translator->codes); translator->codes = NULL;
+
+    translator->linenum = 0;
+    translator->count_line = 0;
+    translator->code_num = 2;
+    translator->lines = NULL;
+    translator->codes = NULL;
+    for (int i = 0; i < MAX_LABELS_NUM; i++) {
+        translator->labels[i] = 0;
+    }
+
+    return ASSEMBLER_OK;
 }
