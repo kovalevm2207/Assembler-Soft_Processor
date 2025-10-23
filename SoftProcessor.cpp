@@ -4,12 +4,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <cstring>
+#include <iostream>
 
 #include "commands.h"
 #include "ReadFile.h"
 #include "my_stack.h"
-#include <iostream>
-#include <SDL2/SDL.h>
 
 typedef enum
 {
@@ -19,7 +18,9 @@ typedef enum
     BAD_VERSION          = 1 << 4,
     READ_FILE_ERR        = 1 << 5,
     MAIN_ARG_NUM_ERR     = 1 << 6,
-    COMMANDS_NUM_ERR     = 1 << 7
+    COMMANDS_NUM_ERR     = 1 << 7,
+    COMMAND_EXE_ERR      = 1 << 8
+
 } ProcessorErr_t;
 
 ProcessorErr_t MainArgAnalyze(int argc);
@@ -34,86 +35,6 @@ ProcessorErr_t ProcessorDump(SPU* spu);
 int main(int argc, char* argv[])
 {
     system("clear");
-
-
-    /*if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        printf("Ошибка инициализации SDL: %s\n", SDL_GetError());
-        return 1;
-    }
-
-    // Создание окна
-    SDL_Window* window = SDL_CreateWindow(
-        "Мое первое SDL2 окно",          // заголовок
-        SDL_WINDOWPOS_CENTERED,          // позиция X
-        SDL_WINDOWPOS_CENTERED,          // позиция Y
-        800,                             // ширина
-        600,                             // высота
-        SDL_WINDOW_SHOWN                 // флаги
-    );
-
-    // Проверка на ошибки создания окна
-    if (window == NULL) {
-        printf("Ошибка создания окна: %s\n", SDL_GetError());
-        SDL_Quit();
-        return 1;
-    }
-
-    // Создание рендерера
-    SDL_Renderer* renderer = SDL_CreateRenderer(
-        window,
-        -1,
-        SDL_RENDERER_ACCELERATED
-    );
-
-    if (renderer == NULL) {
-        printf("Ошибка создания рендерера: %s\n", SDL_GetError());
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return 1;
-    }
-
-    // Основной цикл
-    int running = 1;
-    SDL_Event event;
-
-    while (running) {
-        // Обработка событий
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                running = 0;
-            }
-            if (event.type == SDL_KEYDOWN) {
-                if (event.key.keysym.sym == SDLK_ESCAPE) {
-                    running = 0;
-                }
-            }
-        }
-
-        // Очистка экрана (черный цвет)
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
-
-        // Можно добавить рисование здесь
-        // Например, нарисуем красный прямоугольник
-        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-        SDL_Rect rect = {100, 100, 200, 150};
-        SDL_RenderFillRect(renderer, &rect);
-
-        // Обновление экрана
-        SDL_RenderPresent(renderer);
-
-        // Небольшая задержка для снижения нагрузки на CPU
-        SDL_Delay(16); // ~60 FPS
-    }
-
-    // Освобождение ресурсов
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();*/
-
-
-
-
 
     if (MainArgAnalyze(argc) != PROCESSOR_OK) return 1;
 
@@ -188,13 +109,14 @@ ProcessorErr_t ProcessorCtor(SPU* spu, int* code)
     STATUS |= StackCtor(&labels, MAX_LABELS_NUM);
 
     spu->code = code;
-    spu->PC = 2;
+    spu->PC = START_PC;                        //define 2 KoV исправил (былл просто 2) Мика
     spu->stk = stk;
     spu->labels = labels;
     spu->RAM = RAM;
-    for (int i = 0; i < 4; i++) {
+    /*for (int i = 0; i < 5; i++) {      //func and define KoV
         spu->regs[i] = 0;
-    }
+    }*/
+    memset(spu->RAM, 0, sizeof(spu->regs));       // переделал на memset  Мика
 
     if (STATUS == PROCESSOR_OK) return PROCESSOR_OK;
     else                        return (ProcessorErr_t) STATUS;
@@ -205,11 +127,9 @@ ProcessorErr_t check_heder(int* code)
     assert(code != NULL);
 
     int sign_err = PROCESSOR_OK;
-    if (code[1] != heder::VERSION)              sign_err |= BAD_VERSION;
-    for(int i = 0; i < 4; i++) {
-        if (*((char*)code + i) != heder::SIGNATURE[i]) {
-            sign_err |= BAD_SIGNATURE;
-        }
+    if (code[1] != heder::VERSION) sign_err |= BAD_VERSION;
+    for(size_t i = 0; i < sizeof(heder::SIGNATURE)/sizeof(char); i++) {                  // ну ладно 4 значит не size_t KoV
+        if (*((char*)code + i) != heder::SIGNATURE[i]) sign_err |= BAD_SIGNATURE;        // переделал на sizeof()/sizeof() Мика
     }
     return (ProcessorErr_t) sign_err;
 }
@@ -217,7 +137,7 @@ ProcessorErr_t check_heder(int* code)
 ProcessorErr_t check_commands_num(const command_s* arr_struct)
 {
     int STATUS = PROCESSOR_OK;
-    for (int i = 0; i < COMMANDS_NUM; i++) {
+    for (int i = 0; i < COMMANDS_NUM; i++) {                                //size_t KoV не буду менять, писал уже почему Мика
         if (arr_struct[i].num != i) {
             printf(CHANGE_ON RED TEXT_COLOR "!!!ERROR!!! номера команд не соответствуют их позиции в массиве структур\n" RESET
                                             "Ошибка произошла в команде %s\n"
@@ -244,8 +164,11 @@ ProcessorErr_t ProcessorExe(SPU* spu)
         assert(current_command > -1);
         assert(current_command < COMMANDS_NUM);
 
-        commands[current_command].func_exe(spu, &commands[current_command]); // так как в массиве структур номер команды совпадает
-                                                                             // с номером ее ячейки в массиве
+        if (commands[current_command].func_exe(spu, &commands[current_command]) != CMD_OK)  { // так как в массиве структур номер команды совпадает
+            // Processor_dump()        когда-то точно будет                                  // с номером ее ячейки в массиве
+            printf(RED_COLOR "Ошибка исполнения команды\n" RESET);
+            return COMMAND_EXE_ERR;
+        }
         if (current_command == HLT) return PROCESSOR_OK;
 
         (*PC)++;

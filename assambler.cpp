@@ -105,7 +105,7 @@ AssemblerErr_t AssamblerCtor(translator_s* translator, char* command_text)
     if (linenum <= 0) {STATUS = COUNT_LINES_ERR; return (AssemblerErr_t) STATUS;}
 
     line *command_lines = (line*) calloc(linenum, sizeof(line));
-    if(command_lines == NULL) {STATUS = MEM_ALLOC_ERR; return (AssemblerErr_t) STATUS;}
+    if(command_lines == NULL) {STATUS = MEM_ALLOC_ERR; return (AssemblerErr_t) STATUS;}        //define PROVE_POINTER mb no KoV (пока не делаем)
 
     get_lines(command_lines, command_text);
 
@@ -130,7 +130,7 @@ AssemblerErr_t AssamblerCtor(translator_s* translator, char* command_text)
 AssemblerErr_t check_hashs(void)
 {
     int STATUS = ASSEMBLER_OK;
-    for (int i = 0; i < COMMANDS_NUM; i++)
+    for (int i = 0; i < COMMANDS_NUM; i++)                          //size_t KoV (COMMANDS_NUM has type int, not size_t) мика
     {
         long int hash = 0;
         int letter = 0;
@@ -155,17 +155,17 @@ AssemblerErr_t AssamblerExe(translator_s* translator)
 
     char command[MAX_COMMAND_LENGTH] = {};
 
-    int* count = &(translator->code_num);
+    size_t* count = &(translator->code_num);
     int* codes = translator->codes;
 
     for (; translator->count_line < translator->linenum; translator->count_line++) {
-        sscanf(translator->lines[translator->count_line].ptr, "%s", command);
+        sscanf(translator->lines[translator->count_line].ptr, "%s", command);                   //max size command KoV
+                                                            //  ^^------------------------------------- тяжело подобрать значение
+        long int com_hash = hashing(command);                                                         // падает sanitizer при 20
 
-        long int com_hash = hashing(command);
-
-        for (int i = 0; i <= COMMANDS_NUM; i++) {
-            if (i == COMMANDS_NUM) {
-                if (lbl_asm(translator))
+        for (int i = 0; i <= COMMANDS_NUM; i++) {                                               //size_t KoV
+            if (i == COMMANDS_NUM) {                                                               // (COMMANDS_NUM has type int, not size_t) мика
+                if (lbl_asm(translator) != CMD_OK)
                 {
                     printf(CHANGE_ON RED TEXT_COLOR "!!!ERROR!!! INVALID COMMAND ERR\n" RESET);
                     return INVALID_COMMAND_ERR;
@@ -175,9 +175,9 @@ AssemblerErr_t AssamblerExe(translator_s* translator)
             else if (commands[i].hash == com_hash) {
                 codes[(*count)++] = commands[i].num;
                 #ifdef DUMP
-                    printf("%3d %s  ", *count, command); getchar();
-                #endif
-                if(commands[i].func_asm(translator)) return INVALID_COMMAND_ERR;
+                    printf("%3d %s  ", *count, command); getchar();                 //DEBUG_ON (...) __VA__ARGS__ KoV (Это наверное придется менять тогда,)
+                #endif                                                                                     // появится AssemblerDump)
+                if(commands[i].func_asm(translator) != CMD_OK) return INVALID_COMMAND_ERR;
                 memset(command, 0, sizeof(command));
                 break;
             }
@@ -210,7 +210,7 @@ int write_result_in_text_file(translator_s* translator, char* argv)
     char* CREATE_FILE = create_name(argv);
     FILE* file = fopen(CREATE_FILE, "wb");
 
-    size_t code_size = (size_t) translator->code_num * sizeof(int);
+    size_t code_size = translator->code_num * sizeof(int);
 
     fwrite(&code_size, sizeof(size_t), 1, file);
     fwrite(translator->codes, sizeof(int), translator->code_num, file);
@@ -240,7 +240,7 @@ char* create_name(char* argv)
 void print_result_code(translator_s* translator)
 {
     printf("Result codes: ");
-        for (int i = 0; i < translator->code_num; i++) {
+        for (size_t i = 0; i < translator->code_num; i++) {   // size_t
             printf("%d ", translator->codes[i]);
         }
         printf("\n");

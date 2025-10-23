@@ -1,6 +1,15 @@
 #ifndef COLOR_PRINT
 #define COLOR_PRINT
 
+// fast color change
+
+#define RED_COLOR          "\033[31m"
+#define GREEN_COLOR        "\033[32m"
+#define ORANGE_COLOR       "\033[33m"
+#define BLUE_COLOR         "\033[34m"
+#define PURPLE_COLOR       "\033[35m"
+#define CYAN_COLOR         "\033[36m"
+
 // command
 
 #define  CHANGE_ON         "\033["

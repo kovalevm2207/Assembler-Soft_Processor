@@ -1,8 +1,11 @@
 #include <stdio.h>
 #include "commands.h"
 
-const int NEQ = 0;
-const int EQ = 1;
+typedef enum
+{
+    NEQ = 1, //enum KoV
+    EQ = 2,
+} HashStatus;
 
 int main()
 {
@@ -20,7 +23,7 @@ int main()
     }
     // проверяем на совпадение
 
-    int status = NEQ;
+    HashStatus status = NEQ;
     for (int i = 0; i < COMMANDS_NUM; i++)
     {
         for(int j = i + 1; j < COMMANDS_NUM; j++)
