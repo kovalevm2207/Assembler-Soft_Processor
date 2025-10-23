@@ -19,7 +19,8 @@ typedef enum
     COUNT_LINES_ERR      = 1 << 6,
     INVALID_COMMAND_ERR  = 1 << 7,
     DIFFERENT_HASHES_ERR = 1 << 8,
-    MEM_ALLOC_ERR        = 1 << 9
+    MEM_ALLOC_ERR        = 1 << 9,
+    HAHS_CHECK_ERR       = 1 << 10
 } AssemblerErr_t;
 
 
@@ -27,7 +28,8 @@ AssemblerErr_t MainArgAnalyze(int argc);
 char* ReadProgram(char* argv);
 
 AssemblerErr_t AssamblerCtor(translator_s* translator, char* command_text);
-AssemblerErr_t check_hashs(void);
+AssemblerErr_t HashsCtor(long int* hashs);
+AssemblerErr_t check_hashs(long int* hashs);
 
 AssemblerErr_t AssamblerExe(translator_s* translator);
 long int hashing(char* command);
@@ -99,20 +101,24 @@ AssemblerErr_t AssamblerCtor(translator_s* translator, char* command_text)
     if (command_text == NULL) return NULL_TEXT_PTR;
 
     int STATUS = ASSEMBLER_OK;
-    STATUS = check_hashs();
+    long int* hashs = (long int*) calloc(COMMANDS_NUM, sizeof(long int));
+    if (hashs == NULL) {STATUS |= MEM_ALLOC_ERR; return (AssemblerErr_t) STATUS;}
+
+    STATUS = HashsCtor(hashs);
+    if (STATUS != ASSEMBLER_OK) {free(hashs); return (AssemblerErr_t) STATUS;}
 
     size_t linenum = count_lines(command_text);
-    if (linenum <= 0) {STATUS = COUNT_LINES_ERR; return (AssemblerErr_t) STATUS;}
+    if (linenum <= 0) {free(hashs); STATUS |= COUNT_LINES_ERR; return (AssemblerErr_t) STATUS;}
 
     line *command_lines = (line*) calloc(linenum, sizeof(line));
-    if(command_lines == NULL) {STATUS = MEM_ALLOC_ERR; return (AssemblerErr_t) STATUS;}        //define PROVE_POINTER mb no KoV (пока не делаем)
+    if(command_lines == NULL) {free(hashs); STATUS |= MEM_ALLOC_ERR; return (AssemblerErr_t) STATUS;}        //define PROVE_POINTER mb no KoV (пока не делаем)
 
     get_lines(command_lines, command_text);
 
     free(command_text); command_text = NULL;
 
     int* command_codes = (int*) calloc(linenum * 2 + 1 /*SIGNATURE*/ + 1 /*version*/, sizeof(int));
-    if(command_codes == NULL) {free(command_lines); STATUS = MEM_ALLOC_ERR; return (AssemblerErr_t) STATUS;}
+    if(command_codes == NULL) {free(hashs); free(command_lines); STATUS |= MEM_ALLOC_ERR; return (AssemblerErr_t) STATUS;}
 
     translator->linenum = linenum;
     translator->count_line = 0;
@@ -122,29 +128,50 @@ AssemblerErr_t AssamblerCtor(translator_s* translator, char* command_text)
     for (int i = 0; i < MAX_LABELS_NUM; i++) {
         translator->labels[i] = 0;
     }
+    translator->hashs = hashs;
 
     return (AssemblerErr_t) STATUS;
 }
 
 
-AssemblerErr_t check_hashs(void)
+AssemblerErr_t HashsCtor(long int* hashs)
 {
-    int STATUS = ASSEMBLER_OK;
-    for (int i = 0; i < COMMANDS_NUM; i++)                          //size_t KoV (COMMANDS_NUM has type int, not size_t) мика
+    for (int i = 0; i < COMMANDS_NUM; i++)
     {
         long int hash = 0;
         int letter = 0;
         while(commands[i].name[letter] != '\0') {
             hash = hash * 31 + commands[i].name[letter++];
         }
-        if (hash != commands[i].hash) {
-            printf(CHANGE_ON RED TEXT_COLOR "!!!ERROR!!! Different hashs for the command %s\n"
-                                            "You have            hash = %ld\n"
-                                            "but must have       hash = %ld\n" RESET,
-                                            commands[i].name, commands[i].hash, hash);
-            STATUS = DIFFERENT_HASHES_ERR;
+        hashs[i] = hash;
+        #ifdef DUMP
+            printf("command [%10s] (with number [%2d])  ---has-hash---> %ld\n", commands[i].name, commands[i].num, hash);
+        #endif
+    }
+
+    return check_hashs(hashs);
+}
+
+AssemblerErr_t check_hashs(long int* hashs)
+{
+    int STATUS = ASSEMBLER_OK;
+
+    for (int i = 0; i < COMMANDS_NUM; i++)
+    {
+        for(int j = i + 1; j < COMMANDS_NUM; j++)
+        {
+            if (hashs[i] == hashs[j])
+            {
+                printf(CHANGE_ON RED TEXT_COLOR "You have equal hashes for commands:\n"
+                                                "%10s ---> hash = %ld\n"
+                                                "%10s ---> hash = %ld\n" RESET,
+                                                commands[i].name, hashs[i],
+                                                commands[j].name, hashs[j]);
+                STATUS = HAHS_CHECK_ERR;
+            }
         }
     }
+
     return (AssemblerErr_t) STATUS;
 }
 
@@ -172,7 +199,7 @@ AssemblerErr_t AssamblerExe(translator_s* translator)
                 }
                 break;
             }
-            else if (commands[i].hash == com_hash) {
+            else if (translator->hashs[i] == com_hash) {
                 codes[(*count)++] = commands[i].num;
                 #ifdef DUMP
                     printf("%3zu %s  ", *count, command); getchar();                 //DEBUG_ON (...) __VA__ARGS__ KoV (Это наверное придется менять тогда,)
