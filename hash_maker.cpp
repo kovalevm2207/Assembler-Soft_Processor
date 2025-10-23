@@ -4,7 +4,7 @@
 typedef enum
 {
     NEQ = 1, //enum KoV
-    EQ = 2,
+    EQ  = 2
 } HashStatus;
 
 int main()

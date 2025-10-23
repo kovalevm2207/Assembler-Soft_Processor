@@ -175,7 +175,7 @@ AssemblerErr_t AssamblerExe(translator_s* translator)
             else if (commands[i].hash == com_hash) {
                 codes[(*count)++] = commands[i].num;
                 #ifdef DUMP
-                    printf("%3d %s  ", *count, command); getchar();                 //DEBUG_ON (...) __VA__ARGS__ KoV (Это наверное придется менять тогда,)
+                    printf("%3zu %s  ", *count, command); getchar();                 //DEBUG_ON (...) __VA__ARGS__ KoV (Это наверное придется менять тогда,)
                 #endif                                                                                     // появится AssemblerDump)
                 if(commands[i].func_asm(translator) != CMD_OK) return INVALID_COMMAND_ERR;
                 memset(command, 0, sizeof(command));

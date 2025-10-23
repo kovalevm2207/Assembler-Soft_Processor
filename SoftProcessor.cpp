@@ -30,7 +30,9 @@ ProcessorErr_t check_heder(int* code);
 ProcessorErr_t check_commands_num(const command_s* arr_struct);
 ProcessorErr_t ProcessorExe(SPU* spu);
 ProcessorErr_t ProcessorDtor(SPU* spu);
-ProcessorErr_t ProcessorDump(SPU* spu);
+ProcessorErr_t ProcessorDump_(SPU* spu, const char* func, const char* file, int line);
+
+#define ProcessorDump(spu) ProcessorDump_(spu, __func__, __FILE__, __LINE__)
 
 int main(int argc, char* argv[])
 {
@@ -136,6 +138,8 @@ ProcessorErr_t check_heder(int* code)
 
 ProcessorErr_t check_commands_num(const command_s* arr_struct)
 {
+    assert(arr_struct != NULL);
+
     int STATUS = PROCESSOR_OK;
     for (int i = 0; i < COMMANDS_NUM; i++) {                                //size_t KoV не буду менять, писал уже почему Мика
         if (arr_struct[i].num != i) {
@@ -147,6 +151,7 @@ ProcessorErr_t check_commands_num(const command_s* arr_struct)
             STATUS = COMMANDS_NUM_ERR;
         }
     }
+
     return (ProcessorErr_t) STATUS;
 }
 
@@ -164,20 +169,19 @@ ProcessorErr_t ProcessorExe(SPU* spu)
         assert(current_command > -1);
         assert(current_command < COMMANDS_NUM);
 
+        #ifdef DUMP
+            ProcessorDump(spu);
+        #endif
+
         if (commands[current_command].func_exe(spu, &commands[current_command]) != CMD_OK)  { // так как в массиве структур номер команды совпадает
-            // Processor_dump()        когда-то точно будет                                  // с номером ее ячейки в массиве
-            printf(RED_COLOR "Ошибка исполнения команды\n" RESET);
+            ProcessorDump(spu);                                                               // с номером ее ячейки в массиве
             return COMMAND_EXE_ERR;
         }
         if (current_command == HLT) return PROCESSOR_OK;
 
         (*PC)++;
-
-        #ifdef DUMP
-            ProcessorDump(spu);
-            getchar();
-        #endif
     }
+    ProcessorDump(spu);
     return PROGRAM_END_MISSING;
 }
 
@@ -199,27 +203,29 @@ ProcessorErr_t ProcessorDtor(SPU* spu)
 }
 
 
-ProcessorErr_t ProcessorDump(SPU* spu)
+ProcessorErr_t ProcessorDump_(SPU* spu, const char* func, const char* file, int line)
 {
     assert(spu != NULL);
+    assert(func != NULL);
+    assert(file != NULL);
 
-    printf(CHANGE_ON GREEN TEXT_COLOR "ProcessorDump()\n" RESET);
-    StackDump(&spu->stk);
-    printf("code:\n");
-    printf("PC:" CHANGE_ON PURPLE TEXT_COLOR);
+    printf(GREEN_COLOR "ProcessorDump() from %s at %s:%d\n\n" RESET
+                       "current command:    " ORANGE_COLOR "%s\n" RESET
+                       "code:\n"
+                       "PC:" PURPLE_COLOR, func, file, line, commands[spu->code[spu->PC]].name);
     for (size_t i = 2; i < spu->file_size/sizeof(int);) {
-        printf(CHANGE_ON PURPLE TEXT_COLOR);
+        printf(PURPLE_COLOR);
         for (size_t j = i; j < i + 30 && j < spu->file_size/sizeof(int); j++) {
-            printf(" %3zu", j);
+            printf(" %4zu", j);
         }
         printf(RESET "\n   ");
         for (size_t j = i; j < i + 30 && j < spu->file_size/sizeof(int); j++) {
-            printf(" %3d", spu->code[j]);
+            printf(" %4d", spu->code[j]);
         }
         printf("\n   ");
         for (size_t j = i; j < i + 30 && j < spu->file_size/sizeof(int); j++) {
-            if (j == spu->PC) printf("-" CHANGE_ON BOLD WITH RED TEXT_COLOR "^^^" RESET);
-            else              printf("----");
+            if (j == spu->PC) printf("-" RED_COLOR "^^^^" RESET);
+            else              printf("-----");
         }
         printf(RESET"\n   ");
 
@@ -227,7 +233,10 @@ ProcessorErr_t ProcessorDump(SPU* spu)
         if (next_i >= spu->file_size/sizeof(int)) break;
         i = next_i;
     }
-    printf("\n" CHANGE_ON PURPLE TEXT_COLOR "       SIGNATURE    " CHANGE_ON YELLOW TEXT_COLOR  "        VERSION\n" RESET);
+    printf("\n" PURPLE_COLOR "       SIGNATURE    " ORANGE_COLOR  "        VERSION\n" RESET
+                             "          %s                  %d\n\n", heder::SIGNATURE, heder::VERSION);
     printf("regs:   AX = [%d], BX = [%d], CX = [%d], DX = [%d], SX[%d]\n", spu->regs[0], spu->regs[1], spu->regs[2], spu->regs[3], spu->regs[4]);
+    getchar();
+
     return PROCESSOR_OK;
 }
