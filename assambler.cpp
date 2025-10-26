@@ -258,8 +258,12 @@ AssemblerErr_t create_signature(int* code)
 
 char* create_name(char* argv)
 {
-    char* dot_pos = strchr(argv, '.');
-    *(dot_pos + 1) = '\0';
+    // меняем директорию
+    char* slash_pos = strchr(argv, '/');
+    strcpy(argv, "bin");
+    *slash_pos = '/';
+    // меняем расширение файла
+    *(strchr(argv, '.') + 1) = '\0';
     return strcat(argv, "bin");
 }
 
@@ -280,6 +284,7 @@ AssemblerErr_t AssamblerDtor(translator_s* translator)
 
     free(translator->lines); translator->lines = NULL;
     free(translator->codes); translator->codes = NULL;
+    free(translator->hashs); translator->hashs = NULL;
 
     translator->linenum = 0;
     translator->count_line = 0;

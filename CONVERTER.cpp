@@ -134,6 +134,11 @@ int MainArgAnalyze(int argc)
 
 char* create_name(char* argv)
 {
+    // меняем директорию
+    char* slash_pos = strchr(argv, '/');
+    strcpy(argv, "asm");
+    *slash_pos = '/';
+    // меняем расширение
     char* dot_pos = strchr(argv, '.');
     *(dot_pos + 1) = '\0';
     return strcat(argv, "asm");

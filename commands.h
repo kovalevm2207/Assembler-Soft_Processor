@@ -42,8 +42,8 @@ const int REGS_NUM = 6;
 const size_t START_PC = 2;
 
 const int DELAY_MS = 33;
-const int OX_SIZE = 111 * 2;            // для кружочка 111
-const int RAM_SIZE = 111 * 92 * 2;      //define KoV -- must have (mentor, please, help him)
+const int OX_SIZE = 165 * 2;            // для кружочка 111
+const int RAM_SIZE = 165 * 92 * 2;      //define KoV -- must have (mentor, please, help him)
                                         // mentor said that it's a base and it's OK ))))) Мика
 
 typedef enum
